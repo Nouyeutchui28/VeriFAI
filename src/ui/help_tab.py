@@ -217,7 +217,7 @@ def render_help_tab():
         st.markdown("""
         The intelligence behind **VeriFAI LLM** is not a generic AI. It has been specifically **aligned and specialized** for cybersecurity analysis through:
         
-        *   **Custom Prompt Engineering:** Specialized system instructions designed by **NOUYEUTCHUI YOUMBI JUNIOR BRONDON**.
+        *   **Custom Prompt Engineering:** Specialized system instructions designed by **Brondon Nouyeutchui**.
         *   **Heuristic Mapping:** Alignment with OWASP Top 10 and CWE standards.
         *   **Response Determinism:** Tuned hyper-parameters (Temperature 0.2) to ensure professional, accurate security reporting.
         *   **Dual-Gate Verification:** Integration of static pattern matching with neural-network reasoning.

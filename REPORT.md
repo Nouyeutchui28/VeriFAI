@@ -8,7 +8,7 @@
 - Status: v1.0.0-PRO (documentation and training guidance included in repository).
 
 ## Project Details
-- Lead Architect: NOUYEUTCHUI YOUMBI JUNIOR BRONDON
+- Lead Architect: Brondon Nouyeutchui
 - Main repo files: [README.md](README.md), [MODEL_SPEC.md](MODEL_SPEC.md), [PROJECT_REPORT_DETAILS.md](PROJECT_REPORT_DETAILS.md), [TRAINING_GUIDE.md](TRAINING_GUIDE.md)
 
 ## Architecture & Components

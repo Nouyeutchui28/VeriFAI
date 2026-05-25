@@ -1,7 +1,7 @@
 # 📋 VeriFAI LLM: Comprehensive Project Report Data
 
 **Project Name:** VeriFAI LLM (Security Analysis Platform)  
-**Lead Architect:** NOUYEUTCHUI YOUMBI JUNIOR BRONDON  
+**Lead Architect:** Brondon Nouyeutchui  
 **Version:** 1.0.0-PRO (Production Ready)  
 **Technology Stack:** Python, FastAPI, Streamlit, Semgrep, InsForge Cloud, Groq AI.
 

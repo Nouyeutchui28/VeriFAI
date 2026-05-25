@@ -1,6 +1,6 @@
 # 🛡️ VeriFAI LLM: Model Alignment & Training Specification
 
-**Lead Engineer:** NOUYEUTCHUI YOUMBI JUNIOR BRONDON  
+**Lead Engineer:** Brondon Nouyeutchui  
 **Alignment Strategy:** Cognitive Security Specialization (CSS)  
 **Base Architecture:** Local Ollama (Phi-3)  
 **Alignment Date:** May 2026
