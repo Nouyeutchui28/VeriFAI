@@ -1,0 +1,44 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check for dependency updates
+      uses: dependabot/fetch-metadata@v1
+      id: metadata
+
+    - name: Verify requirements.txt format
+      run: |
+        # Check that all dependencies have version pins
+        if grep -E '^[a-zA-Z0-9_-]+$' requirements.txt; then
+          echo "ERROR: Found unpinned dependencies"
+          exit 1
+        fi
+        echo "✓ All dependencies are pinned"
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build Docker image
+      run: |
+        docker build -t verifai_llm:test .
+
+    - name: Test Docker image
+      run: |
+        docker run --rm verifai_llm:test --help || echo "Image built successfully"

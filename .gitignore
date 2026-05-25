@@ -1,0 +1,8 @@
+venv/
+.venv/
+*.zip
+*.db
+*.log
+docs/assets/
+temp_*/
+__pycache__/

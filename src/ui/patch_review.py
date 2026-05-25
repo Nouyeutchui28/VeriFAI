@@ -1,0 +1,242 @@
+"""
+Patch Review Module - Enhanced patch visibility, review, and application UI.
+
+This module provides a comprehensive patch review interface with:
+- Side-by-side diff view
+- Step-by-step workflow
+- Visual status indicators
+- Direct code application with safety features
+"""
+
+import os
+import streamlit as st
+from typing import Optional, Dict, Any
+
+
+def parse_multi_file_patch(patch_text: str) -> Dict[str, str]:
+    """Split a multi-file unified diff into a dictionary of {filepath: diff}."""
+    if not patch_text or patch_text == "No patch suggestions.":
+        return {}
+    
+    files = {}
+    current_file = None
+    current_lines = []
+    
+    for line in patch_text.splitlines():
+        if line.startswith('+++ '):
+            # Save previous file if exists
+            if current_file and current_lines:
+                files[current_file] = "\n".join(current_lines)
+            
+            # Start new file
+            new_path = line[4:].strip()
+            if new_path.startswith('b/'): new_path = new_path[2:]
+            current_file = new_path
+            current_lines = [f"--- a/{new_path}", line] # Re-add headers
+        elif current_file:
+            if not line.startswith('--- '): # Skip the old-file header as we re-add it
+                current_lines.append(line)
+                
+    # Save last file
+    if current_file and current_lines:
+        files[current_file] = "\n".join(current_lines)
+        
+    return files
+
+def render_patch_review_panel(
+    patch_text: str,
+    original_code: str,
+    patched_code: Optional[str],
+    target_path: str,
+    patch_root: str = ".",
+    patch_file_path: str = "main.py",
+    on_apply: callable = None,
+    on_edit: callable = None,
+    on_download: callable = None,
+):
+    """
+    Enhanced patch review panel with multi-file selection support and precise zipping.
+    """
+    import re
+    from ..core.file_utils import read_file_content
+    
+    # Use result_id for unique button keys to avoid caching issues
+    result_id = st.session_state.get("analysis_results", {}).get("result_id", "default")
+    
+    # ... rest of CSS ...
+    st.markdown("""
+    <style>
+    .patch-panel { background: #0f172a; border: 1px solid rgba(0, 229, 160, 0.2); border-radius: 14px; padding: 1.5rem; margin: 1rem 0; }
+    .patch-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+    .patch-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; color: #00e5a0; margin: 0; }
+    .file-chip { background: rgba(0, 102, 255, 0.1); color: #0066ff; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-family: 'DM Mono', monospace; }
+    .diff-pane { background: #1a1d24; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.08); }
+    .diff-header { padding: 0.5rem 1rem; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.8rem; font-weight: 600; }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    if not patch_text or patch_text == "No patch suggestions.":
+        st.info("⚠️ No patches detected. Try scanning code with known vulnerabilities.")
+        return
+
+    # 1. PARSE PATCHES
+    file_patches = parse_multi_file_patch(patch_text)
+    if not file_patches:
+        st.error("❌ Malformed patch detected. AI failed to generate valid diff headers.")
+        with st.expander("Debug Raw Output"): st.code(patch_text)
+        return
+
+    # 2. FILE SELECTION
+    st.markdown('<div class="patch-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="patch-header"><p class="patch-title">🛠️ Multi-File Security Patch Review</p></div>', unsafe_allow_html=True)
+    
+    selected_file = st.selectbox(
+        "Select file to review fix:",
+        options=list(file_patches.keys()),
+        format_func=lambda x: f"📄 {x}",
+        key=f"selector_{result_id}"
+    )
+    
+    current_patch = file_patches[selected_file]
+    
+    # 3. DYNAMIC CONTENT LOADING
+    # If it's a directory scan, we load the original from disk
+    actual_original = original_code
+    if os.path.isdir(target_path):
+        full_orig_path = os.path.join(target_path, selected_file)
+        if os.path.exists(full_orig_path):
+            actual_original = read_file_content(full_orig_path)
+    
+    # Generate preview
+    current_patched_preview = extract_patched_code(actual_original, current_patch)
+
+    # 4. STATS
+    additions = current_patch.count('\n+') - 1
+    deletions = current_patch.count('\n-') - 1
+    st.markdown(f"**Changes:** <span style='color:#00e5a0;'>+{additions}</span> / <span style='color:#ff4060;'>-{deletions}</span>", unsafe_allow_html=True)
+
+    # 5. DIFF VIEW
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f"<div class='diff-header' style='color:#ff4060;'>Original: {selected_file}</div>", unsafe_allow_html=True)
+        st.code(actual_original[:4000], language="python")
+    with col2:
+        st.markdown(f"<div class='diff-header' style='color:#00e5a0;'>AI Fixed Version</div>", unsafe_allow_html=True)
+        if current_patched_preview:
+            st.code(current_patched_preview[:4000], language="python")
+        else:
+            st.warning("Preview generation failed. Review raw diff below.")
+
+    # 6. ACTIONS
+    st.markdown("### ⚡ Execution")
+    a_col1, a_col2, a_col3 = st.columns([1, 1, 2])
+    
+    with a_col1:
+        if st.button("🔍 Validate Fix", use_container_width=True, key=f"val_{result_id}_{selected_file}"):
+            from ..core.file_utils import apply_patch
+            res = apply_patch(current_patch, patch_root, dry_run=True)
+            if res.get("applied"): st.success("✅ Valid!")
+            else: st.error(f"❌ {res.get('message')}")
+            
+    with a_col2:
+        if st.button("✅ Apply to File", type="primary", use_container_width=True, key=f"app_{result_id}_{selected_file}"):
+            from ..core.file_utils import apply_patch
+            res = apply_patch(current_patch, patch_root, dry_run=False)
+            if res.get("applied"): 
+                st.success("✅ Applied!")
+                st.session_state.patch_applied = True
+            else: st.error("❌ Failed")
+
+    with a_col3:
+        if st.button("🛡️ Verify & Unlock Project Download", use_container_width=True, type="secondary", key=f"ver_{result_id}"):
+            st.session_state.patch_verified = True 
+            st.balloons()
+            st.rerun()
+
+    # Final Project ZIP Download
+    if st.session_state.get("patch_verified"):
+        st.markdown("---")
+        st.markdown("### 📦 Export Secured Version")
+        from ..core.file_utils import create_zip_from_any
+        try:
+            zip_bytes = create_zip_from_any(target_path)
+            st.download_button(
+                "📥 Download All Files (ZIP)",
+                data=zip_bytes,
+                file_name=f"secured_{os.path.basename(target_path)}.zip" if os.path.isdir(target_path) else f"secured_{selected_file}.zip",
+                mime="application/zip",
+                type="primary",
+                use_container_width=True,
+                key=f"zip_dl_{result_id}" # Use result_id to ensure a fresh button for every scan
+            )
+        except Exception as e:
+            st.error(f"ZIP Error: {str(e)}")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+    with st.expander("View Raw Patch (Unified Diff)"):
+        st.code(current_patch, language="diff")
+
+        if st.button(
+            "🔄 Reset",
+            key="patch_reset_btn",
+            use_container_width=True,
+        ):
+            st.session_state.patch_review_step = 0
+            st.session_state.patch_validated = False
+            st.session_state.patch_applied = False
+            st.session_state.patch_verified = False
+            st.session_state.patch_error = None
+            st.session_state.patch_edited_text = patch_text
+            st.success("Patch workflow reset.")
+            st.rerun()
+
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+def extract_patched_code(original_code: str, patch_text: str) -> Optional[str]:
+    """
+    Apply patch to code in memory and return the patched version.
+    This is for preview purposes only.
+    
+    Args:
+        original_code: Original source code
+        patch_text: Unified diff patch
+        
+    Returns:
+        Patched code or None if patch cannot be applied
+    """
+    import re
+    
+    lines = original_code.splitlines(keepends=True)
+    patch_lines = patch_text.splitlines()
+    
+    current_hunk = None
+    old_start = 0
+    old_count = 0
+    new_lines = []
+    line_idx = 0
+    
+    for line in patch_lines:
+        if line.startswith('@@'):
+            # Parse hunk header
+            match = re.match(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@', line)
+            if match:
+                old_start = int(match.group(1)) - 1
+                old_count = int(match.group(2))
+                current_hunk = True
+                line_idx = old_start
+        elif current_hunk and line.startswith('+') and not line.startswith('+++'):
+            new_lines.append(line[1:] + '\n')
+        elif current_hunk and line.startswith('-') and not line.startswith('---'):
+            line_idx += 1
+        elif current_hunk and not line.startswith('\\'):
+            # Context line
+            if line_idx < len(lines):
+                new_lines.append(lines[line_idx])
+                line_idx += 1
+    
+    # Build result
+    if new_lines:
+        return ''.join(new_lines)
+    return None

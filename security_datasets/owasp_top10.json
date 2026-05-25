@@ -1,0 +1,92 @@
+[
+  {
+    "vulnerability": "SQL Injection",
+    "type": "OWASP-A1",
+    "severity": "Critical",
+    "vulnerable_code": "query = \"SELECT * FROM users WHERE id = \" + user_input",
+    "secure_code": "cursor.execute(\"SELECT * FROM users WHERE id = ?\", (user_input,))",
+    "description": "Attacker can manipulate SQL queries through user input",
+    "fix": "Use parameterized queries/prepared statements"
+  },
+  {
+    "vulnerability": "Cross-Site Scripting (XSS)",
+    "type": "OWASP-A3",
+    "severity": "High",
+    "vulnerable_code": "<div>{user_input}</div>",
+    "secure_code": "<div>{escape(user_input)}</div>",
+    "description": "Malicious scripts executed in user browser",
+    "fix": "Sanitize and escape all user inputs"
+  },
+  {
+    "vulnerability": "Broken Authentication",
+    "type": "OWASP-A7",
+    "severity": "Critical",
+    "vulnerable_code": "password_hash = md5(password)\nif password_hash == stored_hash: login()",
+    "secure_code": "if bcrypt.verify(password, stored_hash): login()",
+    "description": "Weak password hashing allows brute force attacks",
+    "fix": "Use strong hashing algorithms (bcrypt, Argon2)"
+  },
+  {
+    "vulnerability": "Sensitive Data Exposure",
+    "type": "OWASP-A2",
+    "severity": "Critical",
+    "vulnerable_code": "response.json({\"credit_card\": cc_number})",
+    "secure_code": "response.json({\"credit_card\": cc_number[-4:]})",
+    "description": "Sensitive data transmitted without encryption",
+    "fix": "Encrypt sensitive data, use HTTPS, avoid logging secrets"
+  },
+  {
+    "vulnerability": "XML External Entity (XXE)",
+    "type": "OWASP-A4",
+    "severity": "High",
+    "vulnerable_code": "xml.etree.ElementTree.fromstring(xml_input)",
+    "secure_code": "defusedxml.ElementTree.fromstring(xml_input)",
+    "description": "XXE attack can lead to file disclosure or DoS",
+    "fix": "Disable external entity processing in XML parsers"
+  },
+  {
+    "vulnerability": "Broken Access Control",
+    "type": "OWASP-A5",
+    "severity": "High",
+    "vulnerable_code": "if request.user.id == target_id: delete_user(target_id)",
+    "secure_code": "if request.user.is_admin or request.user.id == target_id: delete_user(target_id)",
+    "description": "Users access resources they shouldn't have permission to",
+    "fix": "Implement proper authorization checks on all actions"
+  },
+  {
+    "vulnerability": "Insecure Deserialization",
+    "type": "OWASP-A8",
+    "severity": "Critical",
+    "vulnerable_code": "pickle.loads(user_data)",
+    "secure_code": "json.loads(user_data)",
+    "description": "Untrusted deserialization can execute arbitrary code",
+    "fix": "Use safe serialization formats (JSON), validate input"
+  },
+  {
+    "vulnerability": "Using Components with Known Vulnerabilities",
+    "type": "OWASP-A9",
+    "severity": "High",
+    "vulnerable_code": "pip install outdated-library==1.0.0",
+    "secure_code": "pip install secure-library==3.5.2",
+    "description": "Dependencies with known CVEs put system at risk",
+    "fix": "Keep dependencies updated, use dependency scanning"
+  },
+  {
+    "vulnerability": "Insufficient Logging & Monitoring",
+    "type": "OWASP-A10",
+    "severity": "Medium",
+    "vulnerable_code": "login_user(username, password)  # No logging",
+    "secure_code": "logger.info(f\"Login attempt: {username}\"); login_user(username, password)",
+    "description": "Unable to detect and respond to attacks",
+    "fix": "Log security events, implement alerting"
+  },
+  {
+    "vulnerability": "Command Injection",
+    "type": "OWASP-A03",
+    "severity": "Critical",
+    "vulnerable_code": "os.system(f\"rm {filename}\")",
+    "secure_code": "import subprocess; subprocess.run([\"rm\", filename])",
+    "description": "Attacker injects shell commands through user input",
+    "fix": "Avoid shell execution, use safe APIs"
+  }
+]
