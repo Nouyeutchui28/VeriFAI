@@ -1,95 +1,243 @@
 <div align="center">
-  <img src="assets/logo_transparent.png" width="240" alt="VeriFAI LLM Logo">
+  <svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#1a237e;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#0d47a1;stop-opacity:1" />
+      </linearGradient>
+    </defs>
+    <circle cx="120" cy="120" r="110" fill="url(#grad)" />
+    <text x="120" y="130" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold" font-size="42">VeriFAI LLM</text>
+    <text x="120" y="155" text-anchor="middle" fill="white" font-family="Arial" font-size="16">Security Analysis Tool</text>
+  </svg>
+
   <h1>VeriFAI LLM</h1>
   <p align="center">
-    <strong>Enterprise-Grade, Privacy-First Security Analysis Powered by Local AI (Ollama)</strong>
+    <strong>Advanced Security Analysis Powered by Large Language Models and Semgrep</strong>
   </p>
 
   <p align="center">
-    <a href="https://github.com/Nouyeutchui28/VeriFAI/stargazers">
-      <img src="https://img.shields.io/github/stars/Nouyeutchui28/VeriFAI?style=for-the-badge&color=00e5a0" alt="Stars">
+    <a href="https://github.com/codebytemirza/VeriFAI-LLM/stargazers">
+      <img src="https://img.shields.io/github/stars/codebytemirza/VeriFAI-LLM?style=for-the-badge" alt="Stars">
     </a>
-    <a href="https://github.com/Nouyeutchui28/VeriFAI/issues">
-      <img src="https://img.shields.io/github/issues/Nouyeutchui28/VeriFAI?style=for-the-badge&color=ff4060" alt="Issues">
+    <a href="https://github.com/codebytemirza/VeriFAI-LLM/network/members">
+      <img src="https://img.shields.io/github/forks/codebytemirza/VeriFAI-LLM?style=for-the-badge" alt="Forks">
     </a>
-    <a href="https://github.com/Nouyeutchui28/VeriFAI/blob/main/LICENSE">
-      <img src="https://img.shields.io/github/license/Nouyeutchui28/VeriFAI?style=for-the-badge&color=0066ff" alt="License">
+    <a href="https://github.com/codebytemirza/VeriFAI-LLM/issues">
+      <img src="https://img.shields.io/github/issues/codebytemirza/VeriFAI-LLM?style=for-the-badge" alt="Issues">
+    </a>
+    <a href="https://github.com/codebytemirza/VeriFAI-LLM/blob/main/LICENSE">
+      <img src="https://img.shields.io/github/license/codebytemirza/VeriFAI-LLM?style=for-the-badge" alt="License">
     </a>
   </p>
 </div>
 
-<hr style="height: 2px; background: linear-gradient(to right, #001a33, #0066ff);">
-
-## 🛡️ Project Overview
-
-**VeriFAI LLM** is a sophisticated security analysis platform designed for the modern enterprise. Unlike traditional scanners that rely solely on static patterns, VeriFAI combines the mathematical precision of **Semgrep** with the deep contextual reasoning of **Local Large Language Models (Ollama)**. 
-
-Our mission is to provide developers with a private, high-speed auditor that not only finds vulnerabilities but also **writes the code to fix them**.
-
----
-
-## 🧠 AI Intelligence & Training
-
-### How the Model "Thinks"
-VeriFAI LLM uses a **Hybrid Knowledge Architecture**. Instead of sending your sensitive code to the cloud, we leverage a locally hosted **Phi-3** engine that has been specialized for cybersecurity.
+<hr style="height: 2px; background: linear-gradient(to right, #1a237e, #0d47a1);">
 
 <div align="center">
-  <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=800&q=80" width="600" alt="Cybersecurity Data Analysis" style="border-radius: 12px; margin: 20px 0;">
+  <img src="docs/assets/demo.gif" alt="VeriFAI LLM Demo" style="max-width: 800px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
 </div>
 
-**The Alignment Strategy:**
-1.  **Knowledge Kernel:** We "anchor" the AI with the **OWASP Top 10** dataset and thousands of curated "Vulnerable vs. Secure" code pairs.
-2.  **Persona Hardening:** The system is programmed with a **Senior Security Auditor** persona, forcing it to prioritize exploit path analysis and logical data flow over generic coding suggestions.
-3.  **Deterministic Logic:** By locking the engine to a **0.0 Temperature**, we ensure that every analysis is logical, repeatable, and enterprise-ready.
+<h2 align="center">Intelligent Security Analysis</h2>
 
----
-
-## 🚀 Enterprise Features
-
-### 1. Agentic Deep-Trace Analysis
-VeriFAI LLM is "Agentic." It doesn't just scan one file; it **navigates your project**. It automatically resolves local module dependencies (Controllers, Models, Helpers) to trace how user input moves from your API routes to your database, catching logical bugs that single-file scanners miss.
+VeriFAI LLM combines the precision of Semgrep's static analysis with the power of Local Large Language Models (via Ollama) to deliver comprehensive security scanning, interactive vulnerability discussions, and intelligent rule generation capabilities.
 
 <div align="center">
-  <img src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=800&q=80" width="600" alt="African Tech Team Collaboration" style="border-radius: 12px; margin: 20px 0;">
+  <table>
+    <tr>
+      <th width="33%">Static Analysis</th>
+      <th width="33%">Local AI Intelligence</th>
+      <th width="33%">Custom Rules</th>
+    </tr>
+    <tr align="center">
+      <td>Semgrep-powered code scanning with pattern matching</td>
+      <td>Ollama-driven vulnerability assessment (Phi-3)</td>
+      <td>Automated security rule generation</td>
+    </tr>
+  </table>
 </div>
 
-### 2. CI/CD Gatekeeper Mode
-VeriFAI can act as an automated security officer. Using the CLI, you can set a **Security Score threshold (0-100)**. If a Pull Request drops the score below your standard (e.g., 80), VeriFAI will **block the build**, ensuring only secure code reaches production.
+## Core Features
 
-### 3. Parallel Multi-File Scanner
-Our optimized pipeline utilizes your computer's full hardware potential. By running multiple AI analyses in parallel across CPU cores, we deliver deep-scan results 4x faster than traditional AI agents.
+<table>
+<tr>
+<td width="50%" valign="top">
 
----
+**Analysis Engine**
+- Dual-engine security scanning
+- Pattern-based vulnerability detection
+- Machine learning insights
+- Real-time code analysis
+- Comprehensive security reports
 
-## 🛠️ Technology Stack
+</td>
+<td width="50%" valign="top">
 
-| Layer | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Static Engine** | [Semgrep](https://semgrep.dev/) | High-speed pattern matching & CVE detection |
-| **AI Reasoning** | [Ollama (Phi-3)](https://ollama.com/) | 100% Private, local contextual analysis |
-| **Interface** | [Streamlit](https://streamlit.io/) | Sleek, interactive Security Command Center |
-| **Backend** | [FastAPI](https://fastapi.tiangolo.com/) | Production-grade high-performance API node |
-| **Database** | [SQLAlchemy](https://www.sqlalchemy.org/) | Encrypted storage for scan history & metrics |
+**Intelligence Layer**
+- Context-aware security chat
+- Vulnerability explanation
+- Code improvement suggestions
+- Security best practices
+- Custom rule generation
 
----
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 
-## ⚡ Quick Start
+**Patch Management** ✨ NEW
+- AI-generated security patches
+- Side-by-side diff preview
+- Interactive patch review
+- One-click patch application
+- Automatic backup creation
+- Patch validation (dry-run)
+
+</td>
+<td width="50%" valign="top">
+
+**Safety Features**
+- Git-integrated patching
+- Rollback support
+- Backup creation
+- Dry-run validation
+- Error recovery
+
+</td>
+</tr>
+</table>
+
+## Quick Start
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/Nouyeutchui28/VeriFAI.git
+# Clone repository
+git clone https://github.com/codebytemirza/VeriFAI-LLM.git
 
-# 2. Setup your local AI
-ollama pull phi3
-ollama create secure-patch-model -f Modelfile
+# Install dependencies
+pip install -r requirements.txt
 
-# 3. Launch the platform
-./start_app.sh
+# Configure environment
+cp .env.example .env
+
+# Launch application
+streamlit run app.py
 ```
 
----
+<details>
+<summary><strong>Docker Deployment</strong></summary>
+
+```bash
+docker build -t verifai_llm .
+docker run -p 8501:8501 --env-file .env verifai_llm
+```
+</details>
+
+## Architecture
 
 <div align="center">
-  <sub>Built with precision for the global developer community.</sub><br>
-  <strong>VeriFAI LLM: Secure. Private. Fast.</strong>
+  <table>
+    <tr>
+      <th>Component</th>
+      <th>Technology</th>
+      <th>Purpose</th>
+    </tr>
+    <tr>
+      <td>Static Analysis</td>
+      <td>Semgrep</td>
+      <td>Pattern matching & vulnerability detection</td>
+    </tr>
+    <tr>
+      <td>AI Engine</td>
+      <td>Groq LLM</td>
+      <td>Intelligent code analysis</td>
+    </tr>
+    <tr>
+      <td>Interface</td>
+      <td>Streamlit</td>
+      <td>Interactive web application</td>
+    </tr>
+  </table>
 </div>
+
+## Security Analysis Workflow
+
+1. **Code Input**
+   - Direct code entry
+   - File upload support
+   - Multi-file analysis
+   
+2. **Analysis Process**
+   - Semgrep pattern scanning
+   - LLM-based code review
+   - Vulnerability assessment
+   
+3. **Results & Insights**
+   - Detailed findings report
+   - Security recommendations
+   - Interactive consultation
+
+## Advanced Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|----------|
+| Model | LLM model selection | deepseek-r1 |
+| Temperature | Response variation | 0.1 |
+| Rules | Custom Semgrep rules | Optional |
+| Metrics | Performance tracking | Disabled |
+
+## Development
+
+```bash
+# Setup development environment
+python -m venv .venv
+source .venv/bin/activate
+
+# Install development dependencies
+pip install -r requirements-dev.txt
+```
+
+## Contributing
+
+We welcome contributions to VeriFAI LLM. Please review our [Contributing Guidelines](CONTRIBUTING.md) before submitting pull requests.
+
+<table>
+<tr>
+<td>
+
+**Contribution Process**
+1. Fork repository
+2. Create feature branch
+3. Implement changes
+4. Submit pull request
+
+</td>
+<td>
+
+**Code Standards**
+- PEP 8 compliance
+- Comprehensive testing
+- Documentation updates
+- Clean commit history
+
+</td>
+</tr>
+</table>
+
+## License
+
+VeriFAI LLM is released under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+<div align="center">
+  <h2>Technology Stack</h2>
+  <p>
+    <a href="https://semgrep.dev/"><img src="https://img.shields.io/badge/Analysis-Semgrep-2962FF?style=for-the-badge" alt="Semgrep"></a>
+    <a href="https://ollama.com/"><img src="https://img.shields.io/badge/LLM-Ollama-000000?style=for-the-badge" alt="Ollama"></a>
+    <a href="https://streamlit.io/"><img src="https://img.shields.io/badge/UI-Streamlit-FF4B4B?style=for-the-badge" alt="Streamlit"></a>
+  </p>
+</div>
+
+<div align="center">
+  <sub>Built with precision by <a href="https://github.com/codebytemirza">@codebytemirza</a></sub>
+</div>
+/div>
+# VeriFAI
