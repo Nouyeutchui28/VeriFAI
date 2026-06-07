@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from ..core.infra_engine import run_infra_scan
-from ..core.llm import initialize_llm
 
 def render_infra_tab(model_selection, llm_temperature):
     """Render the Infrastructure Reconnaissance tab (Shodan-style)."""
@@ -26,7 +25,7 @@ def render_infra_tab(model_selection, llm_temperature):
             status.update(label="🧠 Analyzing findings with AI...", state="running")
             
             # AI Analysis of the banners
-            llm = initialize_llm(model=model_selection, temperature=llm_temperature)
+            llm = None
             findings_str = "\n".join([f"Port {f['port']}: {f['banner']}" for f in results['findings']])
             
             prompt = f"""

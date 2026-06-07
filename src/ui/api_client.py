@@ -12,8 +12,8 @@ import os
 from src.core.retry_utils import retry_callable, CircuitBreaker
 
 # Allow overriding backend URLs via environment variables or Streamlit secrets
-API_BASE_URL = os.environ.get("VERIFAI_API_BASE_URL") or "http://localhost:8000/api"
-WS_BASE_URL = os.environ.get("VERIFAI_WS_BASE_URL") or "ws://localhost:8000"
+API_BASE_URL = os.environ.get("VERIFAI_API_BASE_URL") or "http://localhost:8001/api"
+WS_BASE_URL = os.environ.get("VERIFAI_WS_BASE_URL") or "ws://localhost:8001"
 INSFORGE_AUTH_URL = "https://inkgfmi3.us-east.insforge.app/api/auth"
 INSFORGE_REST_URL = "https://inkgfmi3.us-east.insforge.app/rest/v1"
 

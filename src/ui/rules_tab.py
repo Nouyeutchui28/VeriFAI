@@ -2,7 +2,6 @@ import re
 import yaml
 import streamlit as st
 
-from ..core.llm import initialize_llm
 from ..core.security import suggest_rules
 
 def extract_yaml_blocks(text):
@@ -54,13 +53,9 @@ def render_rules_tab():
     
     if st.button("🔍 Generate Rules", key="generate_rules_button"):
         with st.spinner("Generating Semgrep rules..."):
-            # Use LLM settings from sidebar
-            llm = initialize_llm(
-                model=st.session_state.get('model_selection', "deepseek-r1-distill-llama-70b"),
-                temperature=st.session_state.get('llm_temperature', 0.1)
-            )
+            llm = None
             
-            if llm and code_input:
+            if code_input:
                 try:
                     rules = suggest_rules(code_input, vulnerability_input, llm)
                     

@@ -9,8 +9,7 @@ from dotenv import load_dotenv
 # Ensure we can import from src
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from src.core.llm import initialize_llm
-from src.core.security import analyze_security, generate_patch_suggestions
+from src.core.security import run_llm_analysis, generate_patch_suggestions
 from src.core.file_utils import apply_patch
 from src.core.verification import verify_fix_with_scanner, verify_patch_safety
 
@@ -99,13 +98,9 @@ def main():
         # If directory, just pass the semgrep results and note it's a directory
         code_content = f"Target is a directory: {target_path}. See Semgrep results."
 
-    # 2. LLM Analysis
-    print(f"[*] Initializing Local AI Engine ({args.model})...")
-    llm = initialize_llm(model=args.model, temperature=0.0)
-    
-    if not llm:
-        print("[!] Failed to initialize Local LLM. Ensure Ollama is running.")
-        sys.exit(1)
+    # 2. AI Analysis
+    print("[*] Initializing AI Deep Reasoning (Qwen2.5-Coder-7B-Instruct)...")
+
 
     print("[*] Performing Deep-Trace Analysis...")
     
@@ -134,7 +129,7 @@ def main():
             except: pass
 
     # Use the unified scanner for CLI too
-    report, patch = unified_security_scan(semgrep_results, code_content, llm, 
+    report, patch = unified_security_scan(semgrep_results, code_content, None, 
                                         file_path=os.path.basename(target_path), 
                                         context_files=context_files)
     

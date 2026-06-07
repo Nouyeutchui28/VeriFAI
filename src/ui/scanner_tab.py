@@ -5,7 +5,6 @@ from datetime import datetime
 import logging
 import re
 
-from ..core.llm import initialize_llm
 from ..core.security import generate_patch_suggestions, run_semgrep_scan, run_llm_analysis
 from ..core.github_handler import validate_github_url, clone_repository
 from ..core.file_utils import save_uploaded_file, generate_report, save_code_to_temp_file, extract_zip, apply_patch, extract_primary_code_sample
@@ -163,12 +162,9 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
             
             # Step 2: Parallel AI Analysis & Patching
             status.update(label="🤖 Running Parallel AI Analysis... (Step 2/3)", state="running")
-            progress_placeholder.progress(0.4, text="Initializing local AI engine for concurrent analysis...")
+            progress_placeholder.progress(0.4, text="Initializing Hugging Face engine for concurrent analysis...")
             
-            llm = initialize_llm(
-                model=st.session_state.get("model_selection", "secure-patch-model"),
-                temperature=st.session_state.get("llm_temperature", 0.0),
-            )
+            llm = None
 
             # Identify all unique flagged files
             flagged_files = list(set([f.get("path") for f in findings if f.get("path")]))
@@ -303,6 +299,11 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
 
             progress_placeholder.progress(1.0, text="Scan complete!")
             status.update(label="✅ Security Scan Complete!", state="complete", expanded=False)
+            
+            # Verification Success Message
+            if st.session_state.get("patch_verified") and not findings:
+                st.success("🎉 VERIFICATION PASSED: All vulnerabilities have been successfully resolved in the new version!")
+                st.session_state.patch_verified = False # Reset flag after successful pass
 
         except Exception as e:
             st.session_state.scan_error = True

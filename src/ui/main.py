@@ -1,5 +1,10 @@
 import os
+from dotenv import load_dotenv
 import streamlit as st
+
+# Load environment variables at the very beginning
+load_dotenv()
+
 import pandas as pd
 import atexit
 from datetime import datetime
@@ -375,10 +380,10 @@ def render_sidebar_navigation(current_page):
         f"""
         <div class="model-chip">
             <div style="font-weight: 700; color: var(--text); font-size: 0.85rem;">
-                <span class="live-dot"></span> {st.session_state.get('model_selection', 'secure-patch-model')}
+                <span class="live-dot"></span> Qwen2.5-Coder-7B
             </div>
             <div style="color: var(--text3); font-size: 0.75rem; margin-top: 0.25rem;">
-                Engine: Local Ollama AI
+                Engine: Hugging Face AI
             </div>
         </div>
         """,

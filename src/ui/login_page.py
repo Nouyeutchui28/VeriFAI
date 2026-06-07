@@ -142,34 +142,28 @@ def render_login_page():
             st.markdown("<div style='text-align: center; margin-bottom: 1rem; color: #94a3b8;'>Or continue with</div>", unsafe_allow_html=True)
             
             api_client = get_api_client()
-            google_oauth_url = f"{api_client.auth_url}/authorize?provider=google&redirect_to=http://localhost:8501"
+            # Fixed redirect to port 8503
+            google_oauth_url = f"{api_client.auth_url}/authorize?provider=google&redirect_to=http://localhost:8503"
             
             if st.button("🌐 Continue with Google", key="google_signin", use_container_width=True):
                 st.markdown(f'<meta http-equiv="refresh" content="0;url={google_oauth_url}">', unsafe_allow_html=True)
                 st.info("Redirecting to Google...")
-                # Fallback for dev mode simulation
+                # Fallback for session
                 time.sleep(1)
-                st.session_state.access_token = "google_dev_token"
-                st.session_state.user_info = {"id": "google-123", "email": "user@gmail.com", "name": "Google User"}
-                st.session_state.user_id = "google-123"
-                st.session_state.authenticated = True
-                st.success("✅ Google authentication simulated for development!")
-                time.sleep(1)
-                st.rerun()
 
-            # Dev Mode Login
+            # Offline / Local Mode Bypass (Always works)
             st.markdown("---")
-            if st.button("🛠️ Dev Mode: Login as Admin (Bypass)", use_container_width=True):
-                st.session_state.access_token = "dev_token"
+            if st.button("🔌 Offline Mode: Continue as Local User", use_container_width=True, type="primary"):
+                st.session_state.access_token = "offline_token"
                 st.session_state.user_info = {
-                    "id": "admin-123",
-                    "email": "admin@verifai-llm.com",
-                    "role": "project_admin",
-                    "name": "Project Admin"
+                    "id": "local-user-1",
+                    "email": "local@verifai-llm.offline",
+                    "role": "local_admin",
+                    "name": "Local User"
                 }
-                st.session_state.user_id = "admin-123"
+                st.session_state.user_id = "local-user-1"
                 st.session_state.authenticated = True
-                st.success("✅ Logged in as Admin (Dev Mode)")
+                st.success("✅ Logged in to Local Mode")
                 time.sleep(1)
                 st.rerun()
         

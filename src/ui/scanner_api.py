@@ -6,7 +6,6 @@ from datetime import datetime
 import asyncio
 import threading
 
-from ..core.llm import initialize_llm
 from ..core.security import analyze_security, generate_patch_suggestions, run_semgrep_scan, run_llm_analysis
 from ..core.file_utils import save_uploaded_file, generate_report, save_code_to_temp_file, extract_zip, apply_patch, extract_primary_code_sample
 from .api_client import get_api_client
@@ -133,7 +132,7 @@ def render_scanner_tab_with_api(scan_target_type, uploaded_file=None, uploaded_f
                 st.info("📋 Generating patches...")
                 try:
                     patch_suggestions = generate_patch_suggestions(semgrep_results, code_content[:3000],
-                                                                 initialize_llm(model=model_selection, temperature=llm_temperature),
+                                                                 None,
                                                                  file_path=patch_file_path or os.path.basename(target_path))
                 except:
                     patch_suggestions = ""

@@ -21,13 +21,15 @@ class AppState:
         "otp_verification_email": None,
         "github_repo_path": None,
         "github_repo_url": None,
-        "model_selection": "llama-3.3-70b-versatile",
+        "model_selection": "Qwen2.5-Coder-7B-Instruct",
         "llm_temperature": 0.2,
         "theme": "dark",
         "notifications_enabled": True,
         "first_time_user": True,
         "last_scan_id": None,
         "favorites": [],
+        "patch_verified": False,
+        "patch_applied": False,
     }
 
     @staticmethod

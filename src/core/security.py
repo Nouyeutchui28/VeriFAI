@@ -6,11 +6,9 @@ import subprocess
 import streamlit as st
 import logging
 import traceback
-from .llm import initialize_llm
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.messages import HumanMessage, AIMessage
+from .ai_service import generate_vulnerability_analysis, generate_remediation_patch, unified_scan_and_patch, generate_chat_response, generate_semgrep_rules
+from .scrubber import scrub_sensitive_data, sanitize_semgrep_for_llm
+from .cache import get_cached_scan, cache_scan_result, compute_code_hash
 from src.core.retry_utils import retry_callable, CircuitBreaker
 from src.utils.text_chunk import chunk_chat_context, chunk_rule_context
 
@@ -322,310 +320,43 @@ def run_semgrep_scan(target_path, metrics_enabled=False):
 def run_llm_analysis(code_content, semgrep_results, temperature, model_selection):
     """
     Run LLM analysis on the code and semgrep results.
+    Redacts PII/Secrets and uses local caching to avoid API penalties.
     """
-    # Validate code content
     if not code_content or not str(code_content).strip():
-        return "❌ Error: No code content provided for analysis. Please paste code or upload a file."
+        return "❌ Error: No code content provided for analysis."
     
-    # Check if code_content is accidentally the Semgrep JSON
-    if isinstance(code_content, dict) and "results" in code_content:
-        return "❌ Error: Code content appears to be Semgrep JSON, not actual code. Please provide the source code to analyze."
-    
-    try:
-        llm = initialize_llm(model=model_selection, temperature=temperature)
-        if not llm:
-            return "❌ Error: Local secure-patch-model failed to initialize. Please check if Ollama is running."
-        
-        # Use the existing analyze_security logic
-        return analyze_security(semgrep_results, code_content[:5000], llm)
-    except Exception as e:
-        return f"❌ LLM initialization error: {str(e)}"
-
-def analyze_security(semgrep_results, code_snippet, llm):
-    """
-    Analyze security of code using LLM and Semgrep results.
-    
-    Args:
-        semgrep_results (dict): Results from Semgrep scan
-        code_snippet (str): Code to analyze (or directory scan message)
-        llm: Language Model for analysis
-    
-    Returns:
-        str: Comprehensive security analysis
-    """
-    # Validate inputs - allow directory scan fallback messages
-    if not code_snippet or not str(code_snippet).strip():
-        return "❌ No code provided for analysis. Please paste code or upload a file to scan."
-    
-    # Check if code_snippet is accidentally the Semgrep JSON
-    if isinstance(code_snippet, dict) and "results" in code_snippet:
-        return "❌ Error: Code content appears to be Semgrep JSON, not actual code. Please provide the source code to analyze."
-    
-    # Truncate semgrep results if too many findings
-    findings = semgrep_results.get("results", [])
-    
-    # Filter out actual scanner errors so the LLM doesn't "remediate" them
-    if not findings and semgrep_results.get("error"):
-        truncated_results = {"results": [], "message": "Static scanner is currently initializing or restricted. Perform manual analysis."}
-    elif len(findings) > 50:
-        # Sort by severity and keep top 50 for 100% focused coverage
-        findings = findings[:50]
-        truncated_results = {"results": findings, "message": "Analyzing top 50 findings for comprehensive coverage."}
-    else:
-        truncated_results = semgrep_results
-
-    # Clean up findings to remove overly large fields
-    for f in findings:
-        if "extra" in f:
-            # Keep only essential info
-            f["extra"] = {
-                "message": f["extra"].get("message"),
-                "lines": f["extra"].get("lines", "")[:500], # Truncate lines
-                "severity": f["extra"].get("severity")
-            }
-
-    # Create prompt template for LLM
-    prompt = ChatPromptTemplate.from_messages([
-        (
-            "system",
-            """You are an expert security analyst specializing in code vulnerability detection and remediation.
-            
-            Your task is to provide a comprehensive security analysis based on both:
-            1. Semgrep scan results (which may detect known patterns)
-            2. Your own expert analysis of the code (to catch vulnerabilities Semgrep might miss)
-            
-            For each vulnerability (whether detected by Semgrep or by your analysis), provide:
-            - VULNERABILITY: A clear name and explanation of the security issue
-            - CLASSIFICATION: The type of vulnerability (e.g., SQL Injection, XSS, CSRF, etc.)
-            - SEVERITY: Estimate the severity (Critical, High, Medium, Low)
-            - RISK: Explain the potential impact if exploited
-            - FIX: Provide specific code recommendations to fix the issue
-            
-            CRITICAL RULES:
-            - Do NOT use markdown tables. Use simple bullet points.
-            - Always explicitly mention the vulnerability classification name (e.g., "SQL Injection", "Command Injection").
-            - Be concise and direct.
-            """
-        ),
-        ("human", """
-        # Semgrep Results: 
-        {semgrep_results}
-        
-        # Code for Analysis:
-        ```
-        {code_snippet}
-        ```
-        
-        Please provide your comprehensive security assessment using bullet points.
-        """),
-    ])
-
+    code_hash = compute_code_hash(code_content)
+    cached = get_cached_scan(code_hash)
+    if cached and cached.get("llm_analysis"):
+        st.info("⚡ Result loaded from persistent local cache.")
+        return cached["llm_analysis"]
     
     try:
-        # Limit code snippet size for single analysis
-        max_code_size = 3000
-        truncated_code = code_snippet[:max_code_size]
+        safe_code = scrub_sensitive_data(code_content[:5000])
+        safe_semgrep = sanitize_semgrep_for_llm(semgrep_results)
         
-        # Create and invoke chain with retries and circuit-breaker
-        chain = (
-            {"semgrep_results": RunnablePassthrough(), "code_snippet": RunnablePassthrough()} 
-            | prompt 
-            | llm 
-            | StrOutputParser()
-        )
-
-        # Simple process-wide circuit breaker for LLM calls
-        try:
-            global _LLM_BREAKER
-            _LLM_BREAKER
-        except NameError:
-            _LLM_BREAKER = CircuitBreaker(fail_threshold=3, reset_timeout=60)
-
-        def _invoke_chain():
-            return chain.invoke({
-                "semgrep_results": json.dumps(truncated_results, indent=2),
-                "code_snippet": truncated_code
-            })
-
-        result = retry_callable(_invoke_chain, retries=2, backoff_factor=1.0, exceptions=(Exception,), circuit=_LLM_BREAKER, call_timeout=300)
-        return result
+        # Call AI Service
+        analysis_json = generate_vulnerability_analysis(safe_semgrep, safe_code, temperature)
+        if "error" in analysis_json:
+            return analysis_json["error"]
             
-    except Exception as e:
-        error_msg = str(e)
-        # Log LLM analysis errors for debugging
-        try:
-            _log_llm_error(e, semgrep_results=semgrep_results, code_snippet=code_snippet, file_path=None, extra={"phase": "analyze_security"})
-        except Exception:
-            pass
-        if "413" in error_msg or "too large" in error_msg.lower():
-            return "❌ Error: Content is still too large for the model. Please analyze a smaller code section."
-        return f"❌ Analysis Error: {error_msg}"
-
-
-def generate_patch_suggestions(semgrep_results, code_snippet, llm, file_path="main.py"):
-    """
-    Generate security patches based on scanner results and expert AI analysis.
-    """
-    if not llm:
-        return "No patch suggestions."
-
-    prompt = ChatPromptTemplate.from_messages([
-        (
-            "system",
-            """You are a senior security engineer. Your task is to fix the security vulnerabilities in the provided code.
+        # Format JSON to string
+        analysis_str = ""
+        for vuln in analysis_json.get("vulnerabilities", []):
+            analysis_str += f"### {vuln.get('name', 'Unknown')}\n"
+            analysis_str += f"- **Classification**: {vuln.get('classification', 'N/A')}\n"
+            analysis_str += f"- **Severity**: {vuln.get('severity', 'N/A')}\n"
+            analysis_str += f"- **Description**: {vuln.get('description', '')}\n"
+            analysis_str += f"- **Remediation**: {vuln.get('remediation', '')}\n\n"
             
-            REFERENCE FINDINGS: {findings}
-            
-            INSTRUCTIONS:
-            1. Analyze the findings and the code.
-            2. Apply fixes for ALL identified vulnerabilities.
-            3. Return the ENTIRE code block with the security fixes applied.
-            4. Do NOT explain your changes. Do NOT include any chat or markdown.
-            5. Just output the corrected code.
-            """
-        ),
-        (
-            "human",
-            """File: {file_path}
-            Code:
-            ```python
-            {code_snippet}
-            ```
-            Return the complete fixed code:"""
-        ),
-    ])
-
-    try:
-        findings = semgrep_results.get("results", []) if isinstance(semgrep_results, dict) else []
-        # Filter findings for the specific file
-        file_findings = [f for f in findings if f.get("path") == file_path or not f.get("path")]
+        if not analysis_str:
+            analysis_str = "No vulnerabilities detected by AI."
         
-        # Prepare a concise findings list for the prompt
-        concise_findings = []
-        for f in file_findings[:20]: # Up to 20 per file
-            concise_findings.append({
-                "id": f.get("check_id"),
-                "line": f.get("start", {}).get("line"),
-                "msg": f.get("extra", {}).get("message")
-            })
-
-        chain = (
-            {"findings": RunnablePassthrough(), "code_snippet": RunnablePassthrough(), "file_path": RunnablePassthrough()} 
-            | prompt 
-            | llm 
-            | StrOutputParser()
-        )
-
-        def _invoke_patch():
-            return chain.invoke({
-                "findings": json.dumps(concise_findings),
-                "code_snippet": code_snippet,
-                "file_path": file_path
-            })
-
-        fixed_code = retry_callable(_invoke_patch, retries=1, call_timeout=300)
-        
-        # Extract code from markdown
-        if "```" in fixed_code:
-            parts = fixed_code.split("```")
-            for p in parts:
-                p_s = p.strip()
-                if p_s.startswith("python"): fixed_code = p_s[6:].strip(); break
-                elif p_s: fixed_code = p_s; break
-        
-        # Cleanup chatter
-        fixed_lines = [l for l in fixed_code.splitlines() if not any(x in l.lower() for x in ["here is", "fixed code", "i have fixed"])]
-        fixed_code = "\n".join(fixed_lines).strip()
-
-        return _build_unified_diff(code_snippet, fixed_code, file_path) or "No patch suggestions."
+        cache_scan_result(code_hash, semgrep_results, analysis_str, "")
+        return analysis_str
     except Exception as e:
-        _log_llm_error(e, semgrep_results=semgrep_results, code_snippet=code_snippet, file_path=file_path)
-        return "No patch suggestions."
+        return f"❌ LLM error: {str(e)}"
 
-
-def resolve_local_dependencies(file_code, target_root):
-    """
-    Identify local python modules imported in the code.
-    Returns a list of potential file paths.
-    """
-    deps = []
-    # Match 'from x.y import z' or 'import x.y'
-    patterns = [
-        r"^from\s+([a-zA-Z0-9_\.]+)\s+import",
-        r"^import\s+([a-zA-Z0-9_\.]+)"
-    ]
-    
-    for line in file_code.splitlines():
-        for p in patterns:
-            m = re.match(p, line.strip())
-            if m:
-                module_path = m.group(1).replace(".", "/")
-                # Check for .py file or __init__.py
-                potential_paths = [
-                    f"{module_path}.py",
-                    f"{module_path}/__init__.py"
-                ]
-                for pp in potential_paths:
-                    full_path = os.path.join(target_root, pp)
-                    if os.path.exists(full_path):
-                        deps.append((pp, full_path))
-    return list(set(deps))[:2] # Limit to 2 for performance
-
-
-def unified_security_scan(semgrep_results, code_snippet, llm, file_path="main.py", context_files=None):
-    """Fast, single-pass expert security analysis and remediation."""
-    if not llm: return "❌ Error: LLM not initialized.", "No patch suggestions."
-
-    context_str = ""
-    if context_files:
-        context_str = "\nRELATED CONTEXT FILES:\n"
-        for name, content in context_files.items():
-            context_str += f"\n--- FILE: {name} ---\n{content[:2000]}\n"
-
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", f"""You are a Senior Security Auditor. Your goal is to explain vulnerabilities clearly.
-        You have access to RELATED CONTEXT FILES to help you trace data flow (e.g. from routes to controllers).
-        {context_str}
-        
-        FORMAT YOUR RESPONSE AS:
-        1. ANALYSIS:
-           - [Vulnerability Name]: Clear explanation of what is wrong.
-           - [Impact]: What could an attacker do?
-           - [Fix]: Brief logic of the solution.
-        2. FIXED_CODE: The complete corrected code block.
-        """),
-        ("human", "Primary File to Fix: {file_path}\nFindings: {findings}\nCode:\n```\n{code_snippet}\n```")
-    ])
-
-    try:
-        # Balanced context for Speed + Depth
-        max_code_size = 3500
-        truncated_code = (code_snippet or "")[:max_code_size]
-        
-        findings = semgrep_results.get("results", []) if isinstance(semgrep_results, dict) else []
-        file_findings = [f for f in findings if f.get("path") == file_path or not f.get("path")]
-        
-        # Only top 5 findings to keep prompt small and fast
-        concise_findings = [{"line": f.get("start", {}).get("line"), "msg": f.get("extra", {}).get("message")} for f in file_findings[:5]]
-
-        chain = ({"findings": RunnablePassthrough(), "code_snippet": RunnablePassthrough(), "file_path": RunnablePassthrough()} | prompt | llm | StrOutputParser())
-
-        response = retry_callable(lambda: chain.invoke({"findings": json.dumps(concise_findings), "code_snippet": truncated_code, "file_path": file_path}), retries=1, call_timeout=240)
-        
-        analysis, fixed_code = "", ""
-        if "FIXED_CODE" in response:
-            parts = response.split("FIXED_CODE")
-            analysis = parts[0].replace("ANALYSIS", "").strip(": \n")
-            fixed_code = parts[1].strip(": \n")
-        else:
-            analysis = response
-            if "```" in response: fixed_code = response.split("```")[1].strip("python\n ")
-
-        patch = _build_unified_diff(truncated_code, fixed_code, file_path) if fixed_code else ""
-        return analysis, (patch or "No patch suggestions.")
-    except Exception as e:
-        _log_llm_error(e, semgrep_results=semgrep_results, code_snippet=code_snippet, file_path=file_path)
-        return f"❌ AI Analysis Error: {str(e)}", "No patch suggestions."
 
 
 def _build_unified_diff(original_text, patched_text, patch_path):
@@ -841,150 +572,107 @@ def _build_unified_diff(original_text, patched_text, patch_path):
 
     # Re-add security_chat function which was accidentally removed earlier
 
-def security_chat(code_snippet, llm_analysis, chat_history, query, llm):
+def security_chat(code_snippet, llm_analysis, chat_history, query, llm=None):
     """
-    Generate security-focused chat responses.
-    
-    Args:
-        code_snippet (str): Original code
-        llm_analysis (str): Previous LLM security analysis
-        chat_history (list): Conversation history
-        query (str): User's current query
-        llm: Language Model for response generation
-    
-    Returns:
-        str: Chat response focused on vulnerabilities
+    Expert security chat assistant powered by Qwen2.5.
     """
-    try:
-        # Chunk the context before processing
-        chunked_code, chunked_analysis = chunk_chat_context(code_snippet, llm_analysis)
-        
-        # Convert chat history to the format expected by LangChain
-        formatted_messages = []
-        for msg in chat_history[-3:]:  # Only keep last 3 messages to manage context
-            role = msg.get("role", "human")
-            content = msg.get("content", "")
-            if role in ["human", "user"]:
-                formatted_messages.append(HumanMessage(content=content))
-            else:
-                formatted_messages.append(AIMessage(content=content))
-        
-        # Create prompt template for security chat
-        chat_prompt = ChatPromptTemplate.from_messages([
-            (
-                "system",
-                """You are a High-Speed Security Assistant. 
-                STRICT RULES:
-                1. ONLY answer questions about code security, vulnerabilities (OWASP), and remediation.
-                2. If the user asks a non-security question (e.g., greetings, general coding, weather), politely say: "I only provide security-focused assistance."
-                3. Be EXTREMELY CONCISE. Use bullet points. No long explanations.
-                4. Maximize response speed by being brief.
-                """
-            ),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "Code: {code}\nFindings: {llm_analysis}\n\nQuestion: {query}"),
-        ])
-        
-        # Create and invoke chain
-        chain = (
-            {
-                "code": lambda _: chunked_code, 
-                "llm_analysis": lambda _: chunked_analysis,
-                "query": lambda _: query, 
-                "chat_history": lambda _: formatted_messages
-            } 
-            | chat_prompt 
-            | llm 
-            | StrOutputParser()
-        )
-        
-        # Invoke the chain
-        try:
-            global _LLM_BREAKER
-            _LLM_BREAKER
-        except NameError:
-            _LLM_BREAKER = CircuitBreaker(fail_threshold=3, reset_timeout=60)
-
-        def _invoke_chat():
-            return chain.invoke({})
-
-        response = retry_callable(_invoke_chat, retries=1, backoff_factor=1.0, exceptions=(Exception,), circuit=_LLM_BREAKER, call_timeout=300)
-        return response
-    except Exception as e:
-        error_msg = str(e)
-        if "413" in error_msg or "too large" in error_msg.lower():
-            return "❌ Error: Conversation context is too large for the model. Try starting a new chat or using smaller code snippets."
-        return f"❌ Security Chat Error: {error_msg}"
-
-def suggest_rules(code_snippet, llm_analysis, llm):
-    """
-    Generate custom Semgrep rules based on identified vulnerabilities.
+    from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
     
-    Args:
-        code_snippet (str): Original code
-        llm_analysis (str): Vulnerabilities analysis
-        llm: Language Model for rule generation
+    # Redact context for privacy
+    safe_code = scrub_sensitive_data(code_snippet)
+    safe_analysis = scrub_sensitive_data(llm_analysis)
     
-    Returns:
-        str: Generated Semgrep rules
-    """
-    # Chunk the context before processing
-    chunked_code, chunked_analysis = chunk_rule_context(code_snippet, llm_analysis)
+    messages = [
+        SystemMessage(content=f"You are an expert security analyst. Context Code: {safe_code}\nContext Analysis: {safe_analysis}")
+    ]
     
-    # Create prompt template for rule suggestions
-    prompt = ChatPromptTemplate.from_messages([
-        (
-            "system",
-            """You are a Semgrep rule expert. Based on the provided code and the vulnerabilities that were identified in the analysis, 
-            create custom Semgrep rules that would help detect these specific vulnerabilities.
+    for msg in chat_history:
+        if msg["role"] == "user":
+            messages.append(HumanMessage(content=msg["content"]))
+        else:
+            messages.append(AIMessage(content=msg["content"]))
             
-            Format each rule as valid YAML that can be directly used with Semgrep. Include:
-            1. A brief description of what the rule detects
-            2. The pattern to match
-            3. The severity level
-            4. The language it applies to
-            
-            Focus on creating rules that would have detected the specific vulnerabilities identified in the LLM analysis.
-            """
-        ),
-        ("human", """
-        # Code for Rule Generation:
-        ```
-        {code_snippet}
-        ```
-        
-        # Identified Vulnerabilities:
-        {llm_analysis}
-        
-        Please create custom Semgrep rules that would detect the specific vulnerabilities identified in the analysis.
-        """),
-    ])
+    messages.append(HumanMessage(content=query))
     
-    try:
-        # Create and invoke chain with chunked content
-        chain = (
-            {"code_snippet": RunnablePassthrough(), "llm_analysis": RunnablePassthrough()} 
-            | prompt 
-            | llm 
-            | StrOutputParser()
-        )
+    res = generate_chat_response(messages)
+    if "error" in res:
+        return f"❌ Chat Error: {res['error']}"
         
-        try:
-            global _LLM_BREAKER
-            _LLM_BREAKER
-        except NameError:
-            _LLM_BREAKER = CircuitBreaker(fail_threshold=3, reset_timeout=60)
+    return res.get("response", "No response generated.")
 
-        def _invoke_rules():
-            return chain.invoke({
-                "code_snippet": chunked_code,
-                "llm_analysis": chunked_analysis
-            })
 
-        response = retry_callable(_invoke_rules, retries=1, backoff_factor=1.0, exceptions=(Exception,), circuit=_LLM_BREAKER, call_timeout=300)
+def suggest_rules(code_snippet, llm_analysis, llm=None):
+    """Generate custom Semgrep rules based on identified vulnerabilities."""
+    result = generate_semgrep_rules(code_snippet, llm_analysis)
+    if "error" in result:
+        return f"❌ Rule Generation Error: {result['error']}"
+    return result.get("rules", "")
+
+def analyze_security(semgrep_results, code_snippet, llm=None):
+    return run_llm_analysis(code_snippet, semgrep_results, 0.2, "Qwen")
+
+def generate_patch_suggestions(semgrep_results, code_snippet, llm=None, file_path="main.py"):
+    """
+    Generate security patches based on scanner results and expert AI analysis.
+    Redacts PII/Secrets.
+    """
+    safe_code = scrub_sensitive_data(code_snippet)
+    safe_semgrep = sanitize_semgrep_for_llm(semgrep_results)
+
+    result = generate_remediation_patch(safe_semgrep, safe_code, file_path)
+    if "error" in result:
+        return ""
+    
+    fixed_code = result.get("patched_code", "")
+    patch = _build_unified_diff(safe_code, fixed_code, file_path) if fixed_code else ""
+    return patch or "No patch suggestions."
+
+def unified_security_scan(semgrep_results, code_snippet, llm=None, file_path="main.py", context_files=None):
+    """
+    Fast, single-pass expert security analysis and remediation using Hugging Face Qwen.
+    """
+    code_hash = compute_code_hash(f"{code_snippet}:{file_path}")
+    cached = get_cached_scan(code_hash)
+    if cached and cached.get("llm_analysis"):
+        return cached["llm_analysis"], cached.get("patch", "No patch suggestions.")
+
+    safe_code = scrub_sensitive_data(code_snippet)
+    safe_semgrep = sanitize_semgrep_for_llm(semgrep_results)
+    safe_context_files = {k: scrub_sensitive_data(v) for k, v in context_files.items()} if context_files else None
+
+    result = unified_scan_and_patch(safe_semgrep, safe_code, file_path, safe_context_files)
+    if "error" in result:
+        return result["error"], "No patch suggestions."
         
-        return response
-    except Exception as e:
-        if "413" in str(e) or "too large" in str(e).lower():
-            return "❌ Error: Input size exceeds model's capacity even after chunking. Please try with a smaller code sample."
-        raise e
+    analysis = result.get("analysis", "")
+    fixed_code = result.get("fixed_code", "")
+    
+    patch = _build_unified_diff(safe_code, fixed_code, file_path) if fixed_code else ""
+    final_patch = patch or "No patch suggestions."
+    
+    cache_scan_result(code_hash, semgrep_results, analysis, final_patch)
+    return analysis, final_patch
+
+def resolve_local_dependencies(code, base_path):
+    """
+    Simple dependency resolver for local files.
+    """
+    import re
+    import os
+    
+    deps = []
+    # Match common python imports
+    patterns = [
+        r'^from\s+([\w\.]+)\s+import',
+        r'^import\s+([\w\.]+)'
+    ]
+    
+    for line in code.splitlines():
+        for p in patterns:
+            m = re.match(p, line)
+            if m:
+                module_path = m.group(1).replace('.', '/') + '.py'
+                full_path = os.path.join(base_path, module_path)
+                if os.path.exists(full_path):
+                    deps.append((module_path, full_path))
+    return list(set(deps))[:3]

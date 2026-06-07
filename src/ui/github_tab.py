@@ -12,7 +12,6 @@ from ..core.github_handler import (
     get_repo_language_stats,
     cleanup_repo,
 )
-from ..core.llm import initialize_llm
 from ..core.security import analyze_security, generate_patch_suggestions, run_semgrep_scan, run_llm_analysis
 from ..core.file_utils import generate_report, apply_patch
 
@@ -190,7 +189,7 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
                             patch_suggestions = generate_patch_suggestions(
                                 semgrep_results,
                                 code_content[:3000],
-                                initialize_llm(model=model_selection, temperature=llm_temperature),
+                                None,
                                 file_path=patch_file_path
                             )
                         except:

@@ -149,9 +149,42 @@ def render_patch_review_panel(
 
     with a_col3:
         if st.button("🛡️ Verify & Unlock Project Download", use_container_width=True, type="secondary", key=f"ver_{result_id}"):
-            st.session_state.patch_verified = True 
+            # 1. Determine scan target
+            if st.session_state.get("patch_applied") and target_path:
+                # If patches were applied to disk, scan the whole project directory/file
+                # Clear memory paste to avoid confusion
+                if "scanner_paste_code" in st.session_state: del st.session_state["scanner_paste_code"]
+                
+                # Setup target for directory/file scan
+                if os.path.isdir(target_path):
+                    # For directories, we use the path
+                    st.session_state.scanner_zip_file = None # Clear ZIP
+                    st.session_state.scanner_uploaded_file = None
+                    # We might need a special state to tell scanner to use this path
+                    # but for now, let's try to set it as a "cloned" repo path
+                    st.session_state.scanner_github_repo_path = target_path
+                else:
+                    # For single files, we can just read it back as paste
+                    try:
+                        with open(target_path, "r") as f:
+                            st.session_state.scanner_paste_code = f.read()
+                    except:
+                        st.session_state.scanner_paste_code = current_patched_preview
+            else:
+                # If not applied to disk, use the in-memory preview
+                st.session_state.scanner_paste_code = current_patched_preview or original_code
+
+            # 2. Trigger Scan Request
+            st.session_state.run_scan_request = True
+            st.session_state.patch_verified = True
+            
+            # 3. Force clean state for redirection
+            from ..utils.state import AppState
             st.balloons()
-            st.rerun()
+            st.success("🔍 Security verification initiated...")
+            import time
+            time.sleep(1)
+            AppState.set_page("📊 Security Scanner")
 
     # Final Project ZIP Download
     if st.session_state.get("patch_verified"):

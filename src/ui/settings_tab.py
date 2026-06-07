@@ -29,20 +29,18 @@ def render_settings_tab():
         col1, col2 = st.columns(2)
 
         with col1:
-            render_settings_group("Model Selection", "🤖", "Local Ollama Model Active")
+            render_settings_group("Model Selection", "🤖", "Hugging Face Inference API Active")
             model_options = [
-                "secure-patch-model",
-                "phi3:latest",
-                "tinyllama:latest"
+                "Qwen/Qwen2.5-Coder-7B-Instruct"
             ]
             selected_model = st.selectbox(
                 "Intelligence Model",
                 model_options,
-                index=0, # Default to secure-patch-model
+                index=0, 
                 key="settings_model_select",
                 label_visibility="collapsed"
             )
-            st.info("🚀 Local Migration Complete: Using secure-patch-model via Ollama.")
+            st.info("🚀 Hugging Face API Complete: Using Qwen2.5-Coder-7B-Instruct.")
 
         with col2:
             render_settings_group("Response Variation", "🎲", "Creativity vs Consistency")
@@ -352,6 +350,23 @@ def render_settings_tab():
 
         render_settings_group("API Credentials", "🔑")
 
+        # Hugging Face Token
+        st.markdown("**Hugging Face API Token**")
+        hf_token = st.text_input(
+            "Hugging Face Token (HF_TOKEN)",
+            type="password",
+            value=os.getenv("HF_TOKEN", ""),
+            placeholder="hf_...",
+            help="Required for Qwen2.5-Coder intelligence. Get one at huggingface.co/settings/tokens"
+        )
+        if hf_token and hf_token != os.getenv("HF_TOKEN"):
+            # Optionally update .env or just use in session
+            # For simplicity in this demo, we'll suggest saving it
+            st.info("💡 Don't forget to save settings to apply your new token.")
+            os.environ["HF_TOKEN"] = hf_token
+
+        st.divider()
+
         # GitHub Token
         st.markdown("**GitHub Personal Access Token**")
         github_token = st.text_input(
@@ -365,10 +380,10 @@ def render_settings_tab():
 
         st.divider()
 
-        # Ollama Local Status
-        st.markdown("**Local Security Engine (Ollama)**")
-        st.success("✅ System Context: Local Migration Active")
-        st.caption("The pipeline is now running completely offline using your custom secure-patch-model.")
+        # Hugging Face Status
+        st.markdown("**Hugging Face Intelligence Engine**")
+        st.success("✅ System Context: Qwen2.5-Coder-7B-Instruct Active")
+        st.caption("The pipeline is now running using Hugging Face Serverless Inference API.")
 
         st.divider()
 

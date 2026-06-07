@@ -1,5 +1,4 @@
 import streamlit as st
-from ..core.llm import initialize_llm
 from ..core.security import security_chat
 from ..utils.state import AppState
 
@@ -85,10 +84,8 @@ def render_chat_tab():
         if user_query:
             st.session_state.chat_history.append({"role": "user", "content": user_query})
             with st.spinner("Analyzing vulnerabilities..."):
-                model = st.session_state.get("model_selection", "secure-patch-model")
-                temp = 0.0 # Force 0.0 for chat speed and accuracy
-                llm = initialize_llm(model=model, temperature=temp)
-                if llm:
+                llm = None
+                if llm or True: # Force True since logic is handled in security_chat wrapper now
                     response = security_chat(
                         code_context,
                         security_analysis,
