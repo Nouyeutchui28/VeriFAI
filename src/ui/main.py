@@ -127,32 +127,39 @@ def inject_layout_css():
 
         /* Responsive Controls (Mobile/Tablet) */
         @media (max-width: 1023px) {
-            /* Transform toggle into a high-visibility 'pull-out' tab */
-            [data-testid="stSidebarCollapsedControl"] {
+            /* Force the toggle to be UNMISSABLE */
+            [data-testid="stSidebarCollapsedControl"], 
+            .st-emotion-cache-zq5wih,
+            button[kind="headerNoContext"] {
                 display: flex !important;
                 visibility: visible !important;
+                opacity: 1 !important;
                 background-color: var(--accent) !important;
-                color: #000 !important;
                 border-radius: 0 50% 50% 0 !important;
-                border: 2px solid var(--border) !important;
-                left: -2px !important;
-                top: 20px !important;
-                width: 50px !important;
-                height: 50px !important;
-                box-shadow: 0 0 15px rgba(0, 229, 160, 0.4) !important;
-                z-index: 999999 !important;
-                transition: all 0.3s ease !important;
+                left: 0 !important;
+                top: 60px !important; /* Move it down slightly from the header */
+                width: 56px !important;
+                height: 56px !important;
+                z-index: 9999999 !important;
+                box-shadow: 0 0 20px rgba(0, 229, 160, 0.7) !important;
+                animation: pulse-green 2s infinite !important;
+                justify-content: center !important;
+                align-items: center !important;
             }
-            [data-testid="stSidebarCollapsedControl"]:hover {
-                width: 60px !important;
-                box-shadow: 0 0 25px rgba(0, 229, 160, 0.6) !important;
+
+            @keyframes pulse-green {
+                0% { box-shadow: 0 0 0 0 rgba(0, 229, 160, 0.7); }
+                70% { box-shadow: 0 0 0 15px rgba(0, 229, 160, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(0, 229, 160, 0); }
             }
-            /* Make the internal arrow larger and darker */
-            [data-testid="stSidebarCollapsedControl"] svg {
-                width: 30px !important;
-                height: 30px !important;
+
+            /* Darken the icon for contrast */
+            [data-testid="stSidebarCollapsedControl"] svg,
+            .st-emotion-cache-zq5wih svg {
+                width: 32px !important;
+                height: 32px !important;
                 fill: #000 !important;
-                stroke: #000 !important;
+                color: #000 !important;
             }
             .main .block-container {
                 max-width: 95% !important;
