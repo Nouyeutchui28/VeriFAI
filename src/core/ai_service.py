@@ -96,16 +96,24 @@ def generate_vulnerability_analysis(semgrep_results: dict, code_snippet: str, te
         return {"error": str(e)}
 
 def generate_remediation_patch(semgrep_results: dict, code_snippet: str, file_path: str = "main.py", temperature: float = 0.0) -> dict:
-    """Generate a secure code patch."""
-    system_msg = """You are a senior security engineer. Fix all identified vulnerabilities.
+    """Generate a secure, vulnerability-free code patch."""
+    system_msg = """You are a Senior Security Engineer. Your goal is to rewrite the provided code to be 100% VULNERABILITY-FREE.
+    
+    STRICT SECURITY REQUIREMENTS:
+    1. SQL Injection: Use parameterized queries/prepared statements ONLY. NEVER use string concatenation or f-strings for queries.
+    2. XSS: Implement strict input encoding and output escaping.
+    3. Secrets: Replace any hardcoded secrets with environment variable lookups (e.g., os.getenv).
+    4. Cryptography: Use only modern, secure algorithms (e.g., Argon2, AES-GCM). Replace MD5/SHA1.
+    5. Completeness: Return the ENTIRE functional code block so it can replace the original.
+    
     OUTPUT ONLY VALID JSON:
     {
       "file_path": "...",
-      "patched_code": "..."
+      "patched_code": "The complete, SECURED code."
     }"""
     
     findings_str = json.dumps(semgrep_results.get("results", [])[:10])
-    prompt = f"File: {file_path}\nFindings: {findings_str}\n\nCode:\n{code_snippet}"
+    prompt = f"File: {file_path}\nTarget Vulnerabilities to Fix: {findings_str}\n\nOriginal Code:\n{code_snippet}"
     
     try:
         response = get_ai_response(prompt, system_msg, temperature)
@@ -120,12 +128,18 @@ def unified_scan_and_patch(semgrep_results: dict, code_snippet: str, file_path: 
         for name, content in context_files.items():
             context_str += f"\n--- FILE: {name} ---\n{content[:2000]}\n"
 
-    system_msg = f"""You are a Senior Security Auditor.
+    system_msg = f"""You are a Senior Security Auditor and Remediation Expert.
     {context_str}
+    
+    STRICT REMEDIATION RULES:
+    - Eliminate ALL vulnerabilities identified by Semgrep.
+    - Use secure-by-default libraries (e.g., sqlalchemy for DB, argon2 for hashing).
+    - Ensure the 'fixed_code' is functional, complete, and VULNERABILITY-FREE.
+    
     OUTPUT ONLY VALID JSON:
     {{
-      "analysis": "...",
-      "fixed_code": "..."
+      "analysis": "A detailed security report.",
+      "fixed_code": "The complete, SECURED code block."
     }}"""
     
     findings_str = json.dumps(semgrep_results.get("results", [])[:5])
