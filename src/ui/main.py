@@ -127,17 +127,32 @@ def inject_layout_css():
 
         /* Responsive Controls (Mobile/Tablet) */
         @media (max-width: 1023px) {
-            /* Ensure the toggle button is ALWAYS visible on small screens */
+            /* Transform toggle into a high-visibility 'pull-out' tab */
             [data-testid="stSidebarCollapsedControl"] {
                 display: flex !important;
                 visibility: visible !important;
-                background-color: var(--surface) !important;
-                border-radius: 0 8px 8px 0 !important;
-                border: 1px solid var(--border) !important;
-                border-left: none !important;
-                left: 0 !important;
-                top: 10px !important;
+                background-color: var(--accent) !important;
+                color: #000 !important;
+                border-radius: 0 50% 50% 0 !important;
+                border: 2px solid var(--border) !important;
+                left: -2px !important;
+                top: 20px !important;
+                width: 50px !important;
+                height: 50px !important;
+                box-shadow: 0 0 15px rgba(0, 229, 160, 0.4) !important;
                 z-index: 999999 !important;
+                transition: all 0.3s ease !important;
+            }
+            [data-testid="stSidebarCollapsedControl"]:hover {
+                width: 60px !important;
+                box-shadow: 0 0 25px rgba(0, 229, 160, 0.6) !important;
+            }
+            /* Make the internal arrow larger and darker */
+            [data-testid="stSidebarCollapsedControl"] svg {
+                width: 30px !important;
+                height: 30px !important;
+                fill: #000 !important;
+                stroke: #000 !important;
             }
             .main .block-container {
                 max-width: 95% !important;
