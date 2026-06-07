@@ -119,13 +119,26 @@ def inject_layout_css():
                 visibility: visible !important;
                 display: block !important;
             }
+            /* Explicitly hide collapse button on large desktop to keep sidebar fixed */
             [data-testid="stSidebarCollapsedControl"] {
                 display: none !important;
             }
         }
 
-        /* Tablets and Smaller */
+        /* Responsive Controls (Mobile/Tablet) */
         @media (max-width: 1023px) {
+            /* Ensure the toggle button is ALWAYS visible on small screens */
+            [data-testid="stSidebarCollapsedControl"] {
+                display: flex !important;
+                visibility: visible !important;
+                background-color: var(--surface) !important;
+                border-radius: 0 8px 8px 0 !important;
+                border: 1px solid var(--border) !important;
+                border-left: none !important;
+                left: 0 !important;
+                top: 10px !important;
+                z-index: 999999 !important;
+            }
             .main .block-container {
                 max-width: 95% !important;
                 padding: 1.5rem !important;
