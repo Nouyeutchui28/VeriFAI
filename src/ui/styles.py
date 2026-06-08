@@ -54,30 +54,33 @@ def apply_custom_styles():
         transition: none !important;
     }
 
-    /* 2. Sidebar: Force it to OVERLAP (Position Fixed/Absolute) */
+    /* 2. Sidebar: Force it to OVERLAP (Position Fixed) */
     [data-testid="stSidebar"] {
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
         height: 100vh !important;
-        z-index: 999999 !important; /* Ensure it's above EVERYTHING */
+        z-index: 1000001 !important; /* Above everything */
         background-color: var(--color-bg-medium) !important;
         border-right: 1px solid var(--color-border) !important;
-        box-shadow: 20px 0 50px rgba(0,0,0,0.6) !important;
+        box-shadow: 20px 0 50px rgba(0,0,0,0.8) !important;
         min-width: 320px !important;
         max-width: 320px !important;
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
-    /* Force the sidebar to hide/show without affecting layout */
+    /* Handle Streamlit's native collapsed state classes if they exist */
     [data-testid="stSidebar"][aria-expanded="false"] {
-        transform: translateX(-320px) !important;
-        visibility: hidden !important;
+        transform: translateX(-105%) !important;
     }
     
     [data-testid="stSidebar"][aria-expanded="true"] {
         transform: translateX(0) !important;
-        visibility: visible !important;
+    }
+
+    /* Ensure the sidebar's internal content scrolls correctly */
+    [data-testid="stSidebarUserContent"] {
+        padding-top: 2rem !important;
     }
 
     /* ====================================================================

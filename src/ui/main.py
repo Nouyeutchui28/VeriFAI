@@ -43,7 +43,7 @@ def configure_app():
         page_title="VeriFAI LLM - AI Security Scanner",
         page_icon="🛡️",
         layout="wide",
-        initial_sidebar_state="expanded"
+        initial_sidebar_state="collapsed" # Default to collapsed for overlay feel
     )
     AppState.initialize()
     initialize_session_state()
@@ -73,16 +73,25 @@ def render_sidebar_navigation(current_page):
     rules_count = st.session_state.get("rules_loaded_count", 0)
 
     with st.sidebar:
+        # Close Button at the top of Sidebar
+        col_c1, col_c2 = st.columns([4, 1])
+        with col_c2:
+            if st.button("✕", key="close_sidebar", help="Close Menu"):
+                st.components.v1.html("""<script>
+                    window.parent.document.querySelector('button[aria-label="Collapse sidebar"]').click();
+                </script>""", height=0)
+
         st.markdown(
             """
-            <div style="text-align: center; margin-top: 1rem; margin-bottom: 1.5rem;">
-                <div style="font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 800; color: var(--color-primary);">VeriFAI LLM</div>
+            <div style="text-align: center; margin-top: -1rem; margin-bottom: 1.5rem;">
+                <div style="font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 800; color: #00e5ff;">VeriFAI LLM</div>
                 <div style="color: #8b909e; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Oxbiy Intelligence</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
+    # Sidebar Buttons
     st.sidebar.markdown('<div style="margin-top: 1.5rem; margin-bottom: 0.75rem; color: #8b909e; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;">SCAN</div>', unsafe_allow_html=True)
     for label, page_value in NAV_ITEMS[:3]:
         is_active = current_page == page_value
@@ -114,13 +123,23 @@ def render_top_bar(current_page):
     
     cols = st.columns([0.5, 3, 1, 1, 1.2, 1])
     
-    # Simple JS Toggle for the sidebar via button
-    if cols[0].button("☰", key="menu_toggle", help="Toggle Sidebar"):
+    # Robust JS Toggle for the sidebar
+    if cols[0].button("☰", key="menu_toggle", help="Open Navigation Menu"):
         st.components.v1.html("""<script>
-            var collapseBtn = window.parent.document.querySelector('button[aria-label="Collapse sidebar"]');
+            // Target the hidden native toggle
             var expandBtn = window.parent.document.querySelector('button[aria-label="Expand sidebar"]');
-            if (collapseBtn) collapseBtn.click();
-            else if (expandBtn) expandBtn.click();
+            var collapseBtn = window.parent.document.querySelector('button[aria-label="Collapse sidebar"]');
+            
+            if (expandBtn) {
+                expandBtn.click();
+            } else if (collapseBtn) {
+                // If it's already open, this will close it (toggle behavior)
+                collapseBtn.click();
+            } else {
+                // Fallback for different Streamlit versions
+                var anySidebarBtn = window.parent.document.querySelector('button[data-testid="stSidebarCollapsedControl"]');
+                if (anySidebarBtn) anySidebarBtn.click();
+            }
         </script>""", height=0)
 
     cols[1].markdown(f'<div class="page-header">{page_title}</div>', unsafe_allow_html=True)
@@ -165,6 +184,7 @@ def main():
     render_sidebar_navigation(current_page)
     render_top_bar(current_page)
 
+    # Page Content Routing
     if current_page == "🏠 Dashboard":
         st.markdown('<div class="dashboard-title" style="font-family:Syne; font-size:2rem; font-weight:700; text-transform:uppercase; margin-bottom:0.5rem;">Security Command Center</div>', unsafe_allow_html=True)
         st.markdown('<div class="dashboard-subtitle" style="color:#8b909e; text-transform:uppercase; font-size:0.8rem; letter-spacing:1px; margin-bottom:2rem;">Real-time threat intelligence and infrastructure health</div>', unsafe_allow_html=True)
