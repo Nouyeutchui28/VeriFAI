@@ -43,7 +43,7 @@ def configure_app():
         page_title="VeriFAI LLM - AI Security Scanner",
         page_icon="🛡️",
         layout="wide",
-        initial_sidebar_state="collapsed" # Default to collapsed for overlay feel
+        initial_sidebar_state="collapsed"
     )
     AppState.initialize()
     initialize_session_state()
@@ -73,13 +73,13 @@ def render_sidebar_navigation(current_page):
     rules_count = st.session_state.get("rules_loaded_count", 0)
 
     with st.sidebar:
-        # Close Button at the top of Sidebar
-        col_c1, col_c2 = st.columns([4, 1])
-        with col_c2:
-            if st.button("✕", key="close_sidebar", help="Close Menu"):
-                st.components.v1.html("""<script>
-                    window.parent.document.querySelector('button[aria-label="Collapse sidebar"]').click();
-                </script>""", height=0)
+        # Internal Close Button
+        st.markdown("""
+            <div style="display: flex; justify-content: flex-end; padding: 0.5rem;">
+                <button onclick="window.parent.document.querySelector('button[aria-label=\\'Collapse sidebar\\']').click();" 
+                        style="background: transparent; border: none; color: #8b909e; cursor: pointer; font-size: 1.2rem;">✕</button>
+            </div>
+        """, unsafe_allow_html=True)
 
         st.markdown(
             """
@@ -123,23 +123,13 @@ def render_top_bar(current_page):
     
     cols = st.columns([0.5, 3, 1, 1, 1.2, 1])
     
-    # Robust JS Toggle for the sidebar
-    if cols[0].button("☰", key="menu_toggle", help="Open Navigation Menu"):
+    # Resilient Menu Toggle
+    if cols[0].button("☰", key="menu_toggle"):
         st.components.v1.html("""<script>
-            // Target the hidden native toggle
             var expandBtn = window.parent.document.querySelector('button[aria-label="Expand sidebar"]');
             var collapseBtn = window.parent.document.querySelector('button[aria-label="Collapse sidebar"]');
-            
-            if (expandBtn) {
-                expandBtn.click();
-            } else if (collapseBtn) {
-                // If it's already open, this will close it (toggle behavior)
-                collapseBtn.click();
-            } else {
-                // Fallback for different Streamlit versions
-                var anySidebarBtn = window.parent.document.querySelector('button[data-testid="stSidebarCollapsedControl"]');
-                if (anySidebarBtn) anySidebarBtn.click();
-            }
+            if (expandBtn) expandBtn.click();
+            else if (collapseBtn) collapseBtn.click();
         </script>""", height=0)
 
     cols[1].markdown(f'<div class="page-header">{page_title}</div>', unsafe_allow_html=True)

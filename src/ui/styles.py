@@ -1,7 +1,7 @@
 import streamlit as st
 
 def apply_custom_styles():
-    """Apply professional malware analyzer theme with Overlay Sidebar functionality."""
+    """Apply professional malware analyzer theme with Native Overlay Sidebar."""
     st.markdown("""
     <style>
     /* ====================================================================
@@ -35,17 +35,20 @@ def apply_custom_styles():
     }
 
     /* ====================================================================
-       OVERLAY SIDEBAR SYSTEM
+       OVERLAY SIDEBAR SYSTEM (NATIVE ABSOLUTE)
        ==================================================================== */
     
-    /* 1. Main Content: Force it to take full width and NEVER shift */
-    [data-testid="stAppViewContainer"],
-    [data-testid="stAppViewBlockContainer"] {
+    /* 1. Main Content: Full width, no shifting */
+    [data-testid="stAppViewContainer"] {
         margin-left: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
     }
     
+    [data-testid="stAppViewBlockContainer"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+    }
+
     .main .block-container {
         padding-top: 1rem !important;
         padding-bottom: 1rem !important;
@@ -54,33 +57,25 @@ def apply_custom_styles():
         transition: none !important;
     }
 
-    /* 2. Sidebar: Force it to OVERLAP (Position Fixed) */
-    [data-testid="stSidebar"] {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
+    /* 2. Sidebar: Detach from flow with Absolute Positioning */
+    section[data-testid="stSidebar"] {
+        position: absolute !important;
+        z-index: 999999 !important;
         height: 100vh !important;
-        z-index: 1000001 !important; /* Above everything */
         background-color: var(--color-bg-medium) !important;
         border-right: 1px solid var(--color-border) !important;
         box-shadow: 20px 0 50px rgba(0,0,0,0.8) !important;
-        min-width: 320px !important;
-        max-width: 320px !important;
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transition: transform 0.3s ease-in-out !important;
     }
 
-    /* Handle Streamlit's native collapsed state classes if they exist */
-    [data-testid="stSidebar"][aria-expanded="false"] {
-        transform: translateX(-105%) !important;
+    /* Keep native sidebar buttons visible but stylized if needed */
+    [data-testid="stSidebarCollapsedControl"] {
+        opacity: 0.1 !important; /* Semi-hidden but clickable */
+        transition: opacity 0.2s !important;
     }
     
-    [data-testid="stSidebar"][aria-expanded="true"] {
-        transform: translateX(0) !important;
-    }
-
-    /* Ensure the sidebar's internal content scrolls correctly */
-    [data-testid="stSidebarUserContent"] {
-        padding-top: 2rem !important;
+    [data-testid="stSidebarCollapsedControl"]:hover {
+        opacity: 1 !important;
     }
 
     /* ====================================================================
@@ -89,8 +84,7 @@ def apply_custom_styles():
     [data-testid="stHeader"], 
     .stAppHeader,
     [data-testid="stFooter"],
-    [data-testid="stDecoration"],
-    [data-testid="stSidebarCollapsedControl"] {
+    [data-testid="stDecoration"] {
         display: none !important;
     }
 
