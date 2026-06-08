@@ -43,7 +43,7 @@ def configure_app():
         page_title="VeriFAI LLM - AI Security Scanner",
         page_icon="🛡️",
         layout="wide",
-        initial_sidebar_state="collapsed"
+        initial_sidebar_state="expanded" # FORCE EXPANDED FOR VISIBILITY
     )
     AppState.initialize()
     initialize_session_state()
@@ -73,17 +73,9 @@ def render_sidebar_navigation(current_page):
     rules_count = st.session_state.get("rules_loaded_count", 0)
 
     with st.sidebar:
-        # PURE HTML/JS CLOSE BUTTON (Instant response)
-        st.components.v1.html("""
-            <div style="display: flex; justify-content: flex-end;">
-                <button onclick="window.parent.document.querySelector('button[aria-label=\\'Collapse sidebar\\']').click();" 
-                        style="background: transparent; border: none; color: #8b909e; cursor: pointer; font-size: 1.5rem; padding: 10px;">✕</button>
-            </div>
-        """, height=50)
-
         st.markdown(
             """
-            <div style="text-align: center; margin-top: -1rem; margin-bottom: 1.5rem;">
+            <div style="text-align: center; margin-top: 1rem; margin-bottom: 1.5rem;">
                 <div style="font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 800; color: #00e5ff;">VeriFAI LLM</div>
                 <div style="color: #8b909e; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Oxbiy Intelligence</div>
             </div>
@@ -110,7 +102,7 @@ def render_sidebar_navigation(current_page):
         if st.sidebar.button(label, key=f"nav_{label}", use_container_width=True, type="primary" if is_active else "secondary"):
             AppState.set_page(page_value); st.rerun()
 
-    st.sidebar.markdown(f"""<div class="model-chip"><div style="font-weight: 700; color: #e8eaf0; font-size: 0.85rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#00e5a0; margin-right:5px;"></span> Qwen2.5-Coder-7B</div><div style="color:#8b909e; font-size:0.75rem; margin-top:5px;">Engine: Hugging Face AI</div></div>""", unsafe_allow_html=True)
+    st.sidebar.markdown(f"""<div class="model-chip" style="margin-top: 2rem; padding: 1rem; background: #20242e; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;"><div style="font-weight: 700; color: #e8eaf0; font-size: 0.85rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#00e5a0; margin-right:5px;"></span> Qwen2.5-Coder-7B</div><div style="color:#8b909e; font-size:0.75rem; margin-top:5px;">Engine: Hugging Face AI</div></div>""", unsafe_allow_html=True)
 
 
 def render_top_bar(current_page):
@@ -121,22 +113,11 @@ def render_top_bar(current_page):
 
     st.markdown('<div class="topbar">', unsafe_allow_html=True)
     
-    # 0.5 for Menu Button, 3 for Title, 1 for status, rest for actions
-    cols = st.columns([0.5, 3, 1, 1, 1.2, 1])
+    cols = st.columns([3, 1, 1, 1.2, 1])
     
-    # PURE HTML/JS MENU TOGGLE (No Rerun)
-    with cols[0]:
-        st.components.v1.html("""
-            <button onclick="window.parent.document.querySelector('button[aria-label=\\'Expand sidebar\\']').click();" 
-                    style="background: #20242e; border: 1px solid rgba(255,255,255,0.06); color: #00e5ff; 
-                           cursor: pointer; font-size: 1.5rem; width: 45px; height: 45px; border-radius: 8px;
-                           display: flex; align-items: center; justify-content: center; transition: all 0.2s;">☰</button>
-            <style>button:hover { background: #00e5ff !important; color: #000 !important; }</style>
-        """, height=50)
-
-    cols[1].markdown(f'<div class="page-header">{page_title}</div>', unsafe_allow_html=True)
+    cols[0].markdown(f'<div class="page-header">{page_title}</div>', unsafe_allow_html=True)
     
-    with cols[3]:
+    with cols[2]:
         st.markdown(f'<div class="status-pill"><span class="status-dot {status_class}"></span> semgrep</div>', unsafe_allow_html=True)
 
     if current_page == "📊 Security Scanner":
@@ -145,11 +126,11 @@ def render_top_bar(current_page):
             try:
                 result = st.session_state.analysis_results
                 pdf_bytes = generate_pdf_report(result.get("code_content", ""), result.get("llm_analysis", ""), result.get("semgrep_results", {}))
-                cols[4].download_button("Export Report", pdf_bytes, file_name="security_audit.pdf", mime="application/pdf", use_container_width=True)
-            except: cols[4].button("Export Report", disabled=True, use_container_width=True)
-        else: cols[4].button("Export Report", disabled=True, use_container_width=True)
+                cols[3].download_button("Export Report", pdf_bytes, file_name="security_audit.pdf", mime="application/pdf", use_container_width=True)
+            except: cols[3].button("Export Report", disabled=True, use_container_width=True)
+        else: cols[3].button("Export Report", disabled=True, use_container_width=True)
 
-        if cols[5].button("Run Scan", key="top_run_scan", use_container_width=True, type="primary"):
+        if cols[4].button("Run Scan", key="top_run_scan", use_container_width=True, type="primary"):
             st.session_state.run_scan_request = True; st.rerun()
     
     st.markdown('</div>', unsafe_allow_html=True)
@@ -178,7 +159,7 @@ def main():
 
     # Page Content Routing
     if current_page == "🏠 Dashboard":
-        st.markdown('<div class="dashboard-title" style="font-family:Syne; font-size:2rem; font-weight:700; text-transform:uppercase; margin-bottom:0.5rem;">Security Command Center</div>', unsafe_allow_html=True)
+        st.markdown('<div class="dashboard-title" style="font-family:Syne; font-size:2rem; font-weight:700; text-transform:uppercase; margin-bottom:0.5rem; color:#e8eaf0;">Security Command Center</div>', unsafe_allow_html=True)
         st.markdown('<div class="dashboard-subtitle" style="color:#8b909e; text-transform:uppercase; font-size:0.8rem; letter-spacing:1px; margin-bottom:2rem;">Real-time threat intelligence and infrastructure health</div>', unsafe_allow_html=True)
 
         api_client = get_api_client()
@@ -218,7 +199,7 @@ def main():
         st.markdown("#### 📡 Live Infrastructure Status")
         s1, s2, s3 = st.columns(3)
         for col, title, sub in [(s1, "Database", "Encrypted RDS Connected"), (s2, "AI Engine", "Local Ollama Phi-3"), (s3, "API Layer", "FastAPI Production Node")]:
-            with col: st.markdown(f"""<div class="model-chip" style="margin-top:0;"><div style="font-weight:700; color:#e8eaf0;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#00e5a0; margin-right:5px;"></span> {title}</div><div style="color:#8b909e; font-size:0.8rem; margin-top:5px;">{sub}</div></div>""", unsafe_allow_html=True)
+            with col: st.markdown(f"""<div class="model-chip" style="margin-top:0; padding:1rem; background:#20242e; border:1px solid rgba(255,255,255,0.06); border-radius:8px;"><div style="font-weight:700; color:#e8eaf0;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#00e5a0; margin-right:5px;"></span> {title}</div><div style="color:#8b909e; font-size:0.8rem; margin-top:5px;">{sub}</div></div>""", unsafe_allow_html=True)
 
     elif current_page == "📊 Security Scanner": render_scanner_tab()
     elif current_page == "🛠️ Patch Review":
