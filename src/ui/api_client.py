@@ -3,7 +3,7 @@ import requests
 import asyncio
 import websockets
 import json
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import logging
 
 logger = logging.getLogger(__name__)
@@ -402,6 +402,27 @@ class VeriFAILLMAPIClient:
         except Exception as e:
             logger.error(f"Get all scans error: {str(e)}")
             return {"error": str(e)}
+
+    def get_scan_history_insforge(self, limit: int = 15) -> List[Dict]:
+        """Fetch scan history directly from InsForge for real-time dashboard updates."""
+        try:
+            user_id = st.session_state.user_info.get("id")
+            if not user_id:
+                return []
+
+            response = requests.get(
+                f"{self.rest_url}/scans?user_id=eq.{user_id}&order=start_time.desc&limit={limit}",
+                headers={
+                    "apikey": self.api_key,
+                    "Authorization": f"Bearer {self.token}",
+                    "Content-Type": "application/json"
+                },
+                timeout=15
+            )
+            return response.json() if response.ok else []
+        except Exception as e:
+            logger.error(f"Get scan history InsForge error: {str(e)}")
+            return []
 
     def get_summary_stats_insforge(self) -> Dict:
         """Fetch summary statistics for the dashboard using real data."""

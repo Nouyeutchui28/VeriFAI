@@ -499,6 +499,77 @@ def render_top_bar(current_page):
     st.markdown('</div>', unsafe_allow_html=True)
 
 
+@st.fragment(run_every=15)
+def render_dashboard_fragment():
+    """Render the dashboard metrics with real-time auto-refresh."""
+    api_client = get_api_client()
+    try:
+        stats = api_client.get_summary_stats_insforge()
+    except Exception as e:
+        stats = {}
+
+    # 1. METRICS GRID
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Total Analyses", stats.get("total_scans", 0), delta=None, help="Cumulative code scans performed")
+    m2.metric("Threats Detected", stats.get("vulnerabilities", 0), delta=stats.get("vulnerabilities", 0) * -1 if stats.get("vulnerabilities") else 0, delta_color="inverse")
+    m3.metric("Auto-Remediated", stats.get("fixed_issues", 0), delta=stats.get("fixed_issues", 0), delta_color="normal")
+    m4.metric("Risk Index", f"{stats.get('security_score', 100)}/100", help="Lower index indicates higher security posture")
+
+    st.markdown("---")
+    
+    # 2. VISUAL INTELLIGENCE
+    v1, v2 = st.columns([2, 1])
+    with v1:
+        st.markdown("#### 📈 Analysis Velocity (Last 7 Days)")
+        try:
+            history = api_client.get_scan_history_insforge(limit=15)
+            if isinstance(history, list) and history:
+                history_df = pd.DataFrame(history)
+                if 'start_time' in history_df.columns:
+                    history_df['date'] = pd.to_datetime(history_df['start_time']).dt.date
+                    trend_data = history_df.groupby('date').size().reset_index(name='Scans')
+                    st.area_chart(trend_data.set_index('date'), color="#00e5a0")
+                else: st.info("Analysis velocity data pending.")
+            else: st.info("Scan more projects to see your velocity trends.")
+        except: st.info("Real-time data currently unavailable.")
+
+    with v2:
+        st.markdown("#### 🛡️ Threat Distribution")
+        try:
+            severity_data = api_client.get_severity_stats_insforge()
+            if any(severity_data.values()):
+                # Use a pie chart for better distribution view if possible, else bar
+                st.bar_chart(severity_data, color="#ff4060")
+            else: st.info("No threats detected in recent scans.")
+        except: st.info("Distribution data unavailable.")
+
+    st.markdown("---")
+    
+    # 3. LIVE ACTIVITY FEED
+    st.markdown("#### 📡 Live Infrastructure Status")
+    s1, s2, s3 = st.columns(3)
+    with s1:
+        st.markdown(f"""
+            <div class="model-chip" style="margin-top:0;">
+                <div class="chip-title"><span class="status-dot ready"></span> Database</div>
+                <div class="chip-subtitle">Encrypted RDS Connected</div>
+            </div>
+        """, unsafe_allow_html=True)
+    with s2:
+        st.markdown(f"""
+            <div class="model-chip" style="margin-top:0;">
+                <div class="chip-title"><span class="status-dot ready"></span> AI Engine</div>
+                <div class="chip-subtitle">Local Ollama Phi-3 (8-Core)</div>
+            </div>
+        """, unsafe_allow_html=True)
+    with s3:
+        st.markdown(f"""
+            <div class="model-chip" style="margin-top:0;">
+                <div class="chip-title"><span class="status-dot ready"></span> API Layer</div>
+                <div class="chip-subtitle">FastAPI Production Node</div>
+            </div>
+        """, unsafe_allow_html=True)
+
 def main():
     """Main Application Router."""
     configure_app()
@@ -525,76 +596,7 @@ def main():
     if current_page == "🏠 Dashboard":
         st.markdown('<div class="dashboard-title">Security Command Center</div>', unsafe_allow_html=True)
         st.markdown('<div class="dashboard-subtitle">Real-time threat intelligence and infrastructure health</div>', unsafe_allow_html=True)
-
-        api_client = get_api_client()
-        with st.spinner("Synchronizing live data..."):
-            try:
-                stats = api_client.get_summary_stats_insforge()
-            except Exception as e:
-                st.warning(f"Unable to load dashboard metrics: {str(e)}")
-                stats = {}
-
-        # 1. METRICS GRID
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total Analyses", stats.get("total_scans", 0), delta=None, help="Cumulative code scans performed")
-        m2.metric("Threats Detected", stats.get("vulnerabilities", 0), delta=stats.get("vulnerabilities", 0) * -1 if stats.get("vulnerabilities") else 0, delta_color="inverse")
-        m3.metric("Auto-Remediated", stats.get("fixed_issues", 0), delta=stats.get("fixed_issues", 0), delta_color="normal")
-        m4.metric("Risk Index", f"{stats.get('security_score', 100)}/100", help="Lower index indicates higher security posture")
-
-        st.markdown("---")
-        
-        # 2. VISUAL INTELLIGENCE
-        v1, v2 = st.columns([2, 1])
-        with v1:
-            st.markdown("#### 📈 Analysis Velocity (Last 7 Days)")
-            try:
-                history = api_client.get_scan_history(limit=15)
-                if isinstance(history, list) and history:
-                    history_df = pd.DataFrame(history)
-                    if 'start_time' in history_df.columns:
-                        history_df['date'] = pd.to_datetime(history_df['start_time']).dt.date
-                        trend_data = history_df.groupby('date').size().reset_index(name='Scans')
-                        st.area_chart(trend_data.set_index('date'), color="#00e5a0")
-                    else: st.info("Analysis velocity data pending.")
-                else: st.info("Scan more projects to see your velocity trends.")
-            except: st.info("Real-time data currently unavailable.")
-
-        with v2:
-            st.markdown("#### 🛡️ Threat Distribution")
-            try:
-                severity_data = api_client.get_severity_stats_insforge()
-                if any(severity_data.values()):
-                    # Use a pie chart for better distribution view if possible, else bar
-                    st.bar_chart(severity_data, color="#ff4060")
-                else: st.info("No threats detected in recent scans.")
-            except: st.info("Distribution data unavailable.")
-
-        st.markdown("---")
-        
-        # 3. LIVE ACTIVITY FEED
-        st.markdown("#### 📡 Live Infrastructure Status")
-        s1, s2, s3 = st.columns(3)
-        with s1:
-            st.markdown(f"""
-                <div class="model-chip" style="margin-top:0;">
-                    <div class="chip-title"><span class="status-dot ready"></span> Database</div>
-                    <div class="chip-subtitle">Encrypted RDS Connected</div>
-                </div>
-            """, unsafe_allow_html=True)
-        with s2:
-            st.markdown(f"""
-                <div class="model-chip" style="margin-top:0;">
-                    <div class="chip-title"><span class="status-dot ready"></span> AI Engine</div>
-                    <div class="chip-subtitle">Local Ollama Phi-3 (8-Core)</div>
-                </div>
-            """, unsafe_allow_html=True)
-        with s3:
-            st.markdown(f"""
-                <div class="model-chip" style="margin-top:0;">
-                    <div class="chip-title"><span class="status-dot ready"></span> API Layer</div>
-                    <div class="chip-subtitle">FastAPI Production Node</div>
-                </div>
-            """, unsafe_allow_html=True)
+        render_dashboard_fragment()
 
     elif current_page == "📊 Security Scanner":
         render_scanner_tab()
