@@ -48,6 +48,14 @@ def render_login_page():
         height: 1px;
         margin: 1.5rem 0;
     }
+    .forgot-link {
+        color: #38bdf8;
+        font-size: 0.85rem;
+        text-decoration: none;
+        float: right;
+        margin-top: -1.5rem;
+        cursor: pointer;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -63,15 +71,21 @@ def render_login_page():
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
+        # Initialize session states
         if 'otp_verification_email' not in st.session_state:
             st.session_state.otp_verification_email = None
+        if 'recovery_mode' not in st.session_state:
+            st.session_state.recovery_mode = False
+        if 'recovery_email' not in st.session_state:
+            st.session_state.recovery_email = None
 
-        if st.session_state.otp_verification_email:
+        # 1. EMAIL VERIFICATION FLOW (OTP)
+        if st.session_state.otp_verification_email and not st.session_state.recovery_mode:
             st.markdown("### 📧 Email Verification")
             st.info(f"Verification code sent to **{st.session_state.otp_verification_email}**")
 
             with st.form("otp_form"):
-                otp_code = st.text_input("6-Digit Code", placeholder="000000", max_chars=6, label_visibility="collapsed")
+                otp_code = st.text_input("6-Digit Code", placeholder="000000", max_chars=6)
                 verify_btn = st.form_submit_button("✅ Verify & Login", use_container_width=True, type="primary")
 
                 if verify_btn:
@@ -99,9 +113,70 @@ def render_login_page():
                 st.session_state.otp_verification_email = None
                 st.rerun()
                 
-            return # Exit early to only show OTP form
+            return
 
-        # Standard Login/Signup Tabs
+        # 2. PASSWORD RECOVERY FLOW
+        if st.session_state.recovery_mode:
+            st.markdown("### 🔑 Password Recovery")
+            
+            if not st.session_state.recovery_email:
+                # Step 1: Enter Email
+                with st.form("recovery_request_form"):
+                    rec_email = st.text_input("Enter your account email", placeholder="name@company.com")
+                    submit_rec = st.form_submit_button("Send Reset Code", use_container_width=True, type="primary")
+                    
+                    if submit_rec:
+                        if not rec_email:
+                            st.error("Please enter your email")
+                        else:
+                            api_client = get_api_client()
+                            with st.spinner("Sending reset code..."):
+                                response = api_client.recover_password(rec_email)
+                                if "error" not in response and "message" not in response:
+                                    st.session_state.recovery_email = rec_email
+                                    st.success(f"✅ Reset code sent to {rec_email}")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    error_msg = response.get('message', response.get('error', 'Recovery failed'))
+                                    st.error(f"❌ {error_msg}")
+            else:
+                # Step 2: Enter OTP and New Password
+                st.info(f"Enter the 6-digit code sent to **{st.session_state.recovery_email}**")
+                with st.form("recovery_verify_form"):
+                    otp_code = st.text_input("6-Digit Code", placeholder="000000", max_chars=6)
+                    new_password = st.text_input("New Password", type="password", placeholder="••••••••")
+                    confirm_password = st.text_input("Confirm New Password", type="password", placeholder="••••••••")
+                    reset_btn = st.form_submit_button("Reset Password", use_container_width=True, type="primary")
+                    
+                    if reset_btn:
+                        if not otp_code or len(otp_code) != 6:
+                            st.error("Please enter a valid 6-digit code")
+                        elif not new_password:
+                            st.error("Please enter a new password")
+                        elif new_password != confirm_password:
+                            st.error("Passwords do not match")
+                        else:
+                            api_client = get_api_client()
+                            with st.spinner("Resetting password..."):
+                                response = api_client.reset_password(st.session_state.recovery_email, otp_code, new_password)
+                                if "error" not in response and "message" not in response:
+                                    st.success("✅ Password reset successfully! You can now sign in.")
+                                    st.session_state.recovery_mode = False
+                                    st.session_state.recovery_email = None
+                                    time.sleep(2)
+                                    st.rerun()
+                                else:
+                                    error_msg = response.get('message', response.get('error', 'Reset failed'))
+                                    st.error(f"❌ {error_msg}")
+            
+            if st.button("⬅️ Back to Login", key="back_from_recovery"):
+                st.session_state.recovery_mode = False
+                st.session_state.recovery_email = None
+                st.rerun()
+            return
+
+        # 3. STANDARD LOGIN / SIGNUP TABS
         tab1, tab2 = st.tabs(["🔐 Sign In", "📝 Create Account"])
         
         with tab1:
@@ -109,7 +184,8 @@ def render_login_page():
                 email = st.text_input("Email Address", placeholder="name@company.com")
                 password = st.text_input("Password", type="password", placeholder="••••••••")
                 
-                submit_button = st.form_submit_button("Sign In", use_container_width=True)
+                # Forgot Password Link (simulated with a button inside or outside)
+                submit_button = st.form_submit_button("Sign In", use_container_width=True, type="primary")
                 
                 if submit_button:
                     if not email or not password:
@@ -137,34 +213,9 @@ def render_login_page():
                                 error_msg = response.get('message', response.get('error', 'Login failed'))
                                 st.error(f"Login failed: {error_msg}")
             
-            # Google OAuth Login
-            st.markdown("---")
-            st.markdown("<div style='text-align: center; margin-bottom: 1rem; color: #94a3b8;'>Or continue with</div>", unsafe_allow_html=True)
-            
-            api_client = get_api_client()
-            # Fixed redirect to port 8503
-            google_oauth_url = f"{api_client.auth_url}/authorize?provider=google&redirect_to=http://localhost:8503"
-            
-            if st.button("🌐 Continue with Google", key="google_signin", use_container_width=True):
-                st.markdown(f'<meta http-equiv="refresh" content="0;url={google_oauth_url}">', unsafe_allow_html=True)
-                st.info("Redirecting to Google...")
-                # Fallback for session
-                time.sleep(1)
-
-            # Offline / Local Mode Bypass (Always works)
-            st.markdown("---")
-            if st.button("🔌 Offline Mode: Continue as Local User", use_container_width=True, type="primary"):
-                st.session_state.access_token = "offline_token"
-                st.session_state.user_info = {
-                    "id": "local-user-1",
-                    "email": "local@verifai-llm.offline",
-                    "role": "local_admin",
-                    "name": "Local User"
-                }
-                st.session_state.user_id = "local-user-1"
-                st.session_state.authenticated = True
-                st.success("✅ Logged in to Local Mode")
-                time.sleep(1)
+            # Forgot Password Button
+            if st.button("Forgot Password?", key="forgot_pw_btn", use_container_width=True):
+                st.session_state.recovery_mode = True
                 st.rerun()
         
         with tab2:
@@ -173,7 +224,7 @@ def render_login_page():
                 new_password = st.text_input("Password", type="password", placeholder="••••••••")
                 confirm_password = st.text_input("Confirm Password", type="password", placeholder="••••••••")
                 
-                signup_button = st.form_submit_button("Create Account", use_container_width=True)
+                signup_button = st.form_submit_button("Create Account", use_container_width=True, type="primary")
                 
                 if signup_button:
                     if not new_email or not new_password:
@@ -197,25 +248,9 @@ def render_login_page():
                             else:
                                 error_msg = response.get('message', response.get('error', 'Signup failed'))
                                 st.error(f"Signup failed: {error_msg}")
-            
-            # Google OAuth Signup
-            st.markdown("---")
-            st.markdown("<div style='text-align: center; margin-bottom: 1rem; color: #94a3b8;'>Or sign up with</div>", unsafe_allow_html=True)
-            if st.button("🌐 Sign up with Google", key="google_signup", use_container_width=True):
-                st.markdown(f'<meta http-equiv="refresh" content="0;url={google_oauth_url}">', unsafe_allow_html=True)
-                st.info("Redirecting to Google...")
-                # Fallback for dev mode simulation
-                time.sleep(1)
-                st.session_state.access_token = "google_dev_token"
-                st.session_state.user_info = {"id": "google-123", "email": "user@gmail.com", "name": "Google User"}
-                st.session_state.user_id = "google-123"
-                st.session_state.authenticated = True
-                st.success("✅ Google authentication simulated for development!")
-                time.sleep(1)
-                st.rerun()
 
     st.markdown("""
     <div style="text-align: center; margin-top: 3rem; color: #64748b; font-size: 0.875rem;">
-        Managed via <a href="https://insforge.app" style="color: #38bdf8; text-decoration: none;">InsForge Dashboard</a>
+        VeriFAI LLM Security Scanner | © 2026
     </div>
     """, unsafe_allow_html=True)

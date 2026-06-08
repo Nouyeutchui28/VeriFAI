@@ -263,6 +263,44 @@ class VeriFAILLMAPIClient:
             logger.error(f"Verify token error: {str(e)}")
             return {"error": str(e)}
 
+    def recover_password(self, email: str) -> Dict:
+        """Request password recovery via InsForge."""
+        try:
+            response = requests.post(
+                f"{self.auth_url}/recover?client_type=server",
+                json={"email": email},
+                headers={"apikey": self.api_key, "Content-Type": "application/json"},
+                timeout=15
+            )
+            if not response.ok:
+                try:
+                    return response.json()
+                except:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            logger.error(f"Recover password error: {str(e)}")
+            return {"error": str(e)}
+
+    def reset_password(self, email: str, otp: str, new_password: str) -> Dict:
+        """Verify OTP and reset password via InsForge."""
+        try:
+            response = requests.post(
+                f"{self.auth_url}/recover/verify?client_type=server",
+                json={"email": email, "otp": otp, "password": new_password},
+                headers={"apikey": self.api_key, "Content-Type": "application/json"},
+                timeout=15
+            )
+            if not response.ok:
+                try:
+                    return response.json()
+                except:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            logger.error(f"Reset password error: {str(e)}")
+            return {"error": str(e)}
+
     # InsForge Database methods
     def save_scan_insforge(self, data: Dict) -> Dict:
         """Save a scan record to InsForge Database."""
