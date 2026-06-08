@@ -117,9 +117,12 @@ def inject_layout_css():
             [data-testid="stSidebar"] {
                 transition: transform 0.3s ease-in-out !important;
             }
-            /* Explicitly hide native collapse button on large desktop as we use our custom one */
+            /* Make native collapse button invisible but clickable via JS */
             [data-testid="stSidebarCollapsedControl"] {
-                display: none !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                position: absolute !important;
+                z-index: -1 !important;
             }
         }
 
@@ -451,13 +454,39 @@ def render_top_bar(current_page):
         with cols[0]:
             st.components.v1.html("""
                 <button onclick="
-                    var expandBtn = window.parent.document.querySelector('button[aria-label=\\'Expand sidebar\\']');
-                    var collapseBtn = window.parent.document.querySelector('button[aria-label=\\'Collapse sidebar\\']');
-                    if(expandBtn) { expandBtn.click(); }
-                    else if(collapseBtn) { collapseBtn.click(); }
-                    else { 
-                        var legacyBtn = window.parent.document.querySelector('button[data-testid=\\'stSidebarCollapsedControl\\']');
-                        if (legacyBtn) legacyBtn.click();
+                    var parentDoc = window.parent.document;
+                    var clicked = false;
+                    
+                    // Helper to click if found
+                    function tryClick(selector) {
+                        if (clicked) return;
+                        var btn = parentDoc.querySelector(selector);
+                        if (btn) {
+                            btn.click();
+                            clicked = true;
+                        }
+                    }
+
+                    // Try all known Streamlit sidebar toggle selectors
+                    tryClick('button[data-testid=\\'stSidebarCollapsedControl\\']');
+                    tryClick('button[data-testid=\\'stSidebarCollapseButton\\']');
+                    tryClick('button[aria-label=\\'Collapse sidebar\\']');
+                    tryClick('button[aria-label=\\'Expand sidebar\\']');
+                    tryClick('[data-testid=\\'collapsedControl\\']');
+                    
+                    if (!clicked) {
+                        // Fallback: search all buttons for the SVG icon characteristic
+                        var buttons = Array.from(parentDoc.querySelectorAll('button'));
+                        for (var i=0; i<buttons.length; i++) {
+                            var b = buttons[i];
+                            var svg = b.querySelector('svg');
+                            if (svg && (svg.getAttribute('data-testid') === 'stSidebarCollapseButton' || 
+                                        svg.getAttribute('data-testid') === 'stSidebarCollapsedControl')) {
+                                b.click();
+                                clicked = true;
+                                break;
+                            }
+                        }
                     }
                 " style="
                     background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #00e5a0; 
