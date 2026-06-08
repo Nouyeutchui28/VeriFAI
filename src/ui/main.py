@@ -112,14 +112,12 @@ def inject_layout_css():
             padding: 2rem !important;
         }
 
-        /* Large Screens: Lock Sidebar */
+        /* Desktop: Allow Sidebar Toggle */
         @media (min-width: 1024px) {
             [data-testid="stSidebar"] {
-                transform: none !important;
-                visibility: visible !important;
-                display: block !important;
+                transition: transform 0.3s ease-in-out !important;
             }
-            /* Explicitly hide collapse button on large desktop to keep sidebar fixed */
+            /* Explicitly hide native collapse button on large desktop as we use our custom one */
             [data-testid="stSidebarCollapsedControl"] {
                 display: none !important;
             }
@@ -295,6 +293,15 @@ def inject_layout_css():
             position: sticky;
             top: 0;
             z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
 
         .page-header {
@@ -437,13 +444,34 @@ def render_top_bar(current_page):
 
     st.markdown('<div class="topbar">', unsafe_allow_html=True)
     with st.container():
-        cols = st.columns([3, 1, 1, 1, 1])
-        cols[0].markdown(f'<div class="page-header">{page_title}</div>', unsafe_allow_html=True)
-        cols[1].markdown("&nbsp;")
-        cols[2].markdown(
-            f'<div class="status-pill"><span class="status-dot {status_class}"></span> semgrep ready</div>',
-            unsafe_allow_html=True,
-        )
+        # Layout: Menu Toggle (small), Title (large), padding, Status, Export, Run Scan
+        cols = st.columns([0.3, 3, 0.5, 1, 1, 1])
+        
+        # Pure HTML/JS Menu Toggle
+        with cols[0]:
+            st.components.v1.html("""
+                <button onclick="
+                    var expandBtn = window.parent.document.querySelector('button[aria-label=\\'Expand sidebar\\']');
+                    var collapseBtn = window.parent.document.querySelector('button[aria-label=\\'Collapse sidebar\\']');
+                    if(expandBtn) { expandBtn.click(); }
+                    else if(collapseBtn) { collapseBtn.click(); }
+                    else { 
+                        var legacyBtn = window.parent.document.querySelector('button[data-testid=\\'stSidebarCollapsedControl\\']');
+                        if (legacyBtn) legacyBtn.click();
+                    }
+                " style="
+                    background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #00e5a0; 
+                    cursor: pointer; font-size: 1.5rem; border-radius: 6px; width: 40px; height: 40px;
+                    display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+                ">☰</button>
+                <style>button:hover { background: rgba(0, 229, 160, 0.1) !important; color: #00e5a0 !important; border-color: #00e5a0 !important; }</style>
+            """, height=45)
+
+        cols[1].markdown(f'<div class="page-header" style="margin-top: 5px;">{page_title}</div>', unsafe_allow_html=True)
+        cols[2].markdown("&nbsp;")
+        
+        with cols[3]:
+            st.markdown(f'<div class="status-pill" style="margin-top: 5px;"><span class="status-dot {status_class}"></span> semgrep</div>', unsafe_allow_html=True)
 
         has_results = bool(st.session_state.get("analysis_results"))
         if current_page == "📊 Security Scanner":
