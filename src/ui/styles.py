@@ -62,10 +62,14 @@ def apply_custom_styles():
     /* ====================================================================
        HIDE STANDARD STREAMLIT CLUTTER
        ==================================================================== */
-    [data-testid="stHeader"],
     [data-testid="stFooter"],
     [data-testid="stDecoration"] {
         display: none !important;
+    }
+    
+    /* Make header transparent instead of hiding it so mobile toggle remains functional */
+    [data-testid="stHeader"] {
+        background: transparent !important;
     }
 
     /* ====================================================================

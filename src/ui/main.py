@@ -126,62 +126,26 @@ def inject_layout_css():
             }
         }
 
-        /* Responsive Controls (Mobile/Tablet) */
+        /* Mobile Layout Refinements */
         @media (max-width: 1023px) {
-            /* Force the toggle to be UNMISSABLE */
-            [data-testid="stSidebarCollapsedControl"], 
-            .st-emotion-cache-zq5wih,
-            button[kind="headerNoContext"] {
-                display: flex !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-                background-color: var(--accent) !important;
-                border-radius: 0 50% 50% 0 !important;
-                left: 0 !important;
-                top: 60px !important; /* Move it down slightly from the header */
-                width: 56px !important;
-                height: 56px !important;
-                z-index: 9999999 !important;
-                box-shadow: 0 0 20px rgba(0, 229, 160, 0.7) !important;
-                animation: pulse-green 2s infinite !important;
-                justify-content: center !important;
-                align-items: center !important;
-            }
-
-            @keyframes pulse-green {
-                0% { box-shadow: 0 0 0 0 rgba(0, 229, 160, 0.7); }
-                70% { box-shadow: 0 0 0 15px rgba(0, 229, 160, 0); }
-                100% { box-shadow: 0 0 0 0 rgba(0, 229, 160, 0); }
-            }
-
-            /* Darken the icon for contrast */
-            [data-testid="stSidebarCollapsedControl"] svg,
-            .st-emotion-cache-zq5wih svg {
-                width: 32px !important;
-                height: 32px !important;
-                fill: #000 !important;
-                color: #000 !important;
-            }
             .main .block-container {
-                max-width: 95% !important;
+                max-width: 100% !important;
                 padding: 1.5rem !important;
             }
-            [data-testid="stSidebar"] {
-                min-width: 280px !important;
-                max-width: 280px !important;
+            .topbar {
+                flex-wrap: wrap !important;
+                gap: 1rem !important;
+                height: auto !important;
             }
-        }
-
-        /* Mobile Devices */
-        @media (max-width: 767px) {
-            .main .block-container {
-                padding: 1rem !important;
+            .topbar-left {
+                flex-wrap: wrap !important;
             }
             .page-header {
                 font-size: 1.2rem !important;
             }
-            .dashboard-title {
-                font-size: 1.5rem !important;
+            /* Hide custom iframe menu toggle on mobile, use native header */
+            .topbar iframe {
+                display: none !important;
             }
         }
 
