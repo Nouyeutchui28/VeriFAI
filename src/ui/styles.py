@@ -1,7 +1,7 @@
 import streamlit as st
 
 def apply_custom_styles():
-    """Apply professional malware analyzer theme matching system configuration dashboard."""
+    """Apply professional malware analyzer theme with Overlay Sidebar functionality."""
     st.markdown("""
     <style>
     /* ====================================================================
@@ -35,43 +35,60 @@ def apply_custom_styles():
     }
 
     /* ====================================================================
-       HIDE STANDARD STREAMLIT CLUTTER & REMOVE TOP SPACING
+       OVERLAY SIDEBAR SYSTEM
+       ==================================================================== */
+    
+    /* 1. Main Content: Force it to take full width and NEVER shift */
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewBlockContainer"] {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .main .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+        max-width: 1200px !important;
+        margin: 0 auto !important;
+        transition: none !important;
+    }
+
+    /* 2. Sidebar: Force it to OVERLAP (Position Fixed/Absolute) */
+    [data-testid="stSidebar"] {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100vh !important;
+        z-index: 999999 !important; /* Ensure it's above EVERYTHING */
+        background-color: var(--color-bg-medium) !important;
+        border-right: 1px solid var(--color-border) !important;
+        box-shadow: 20px 0 50px rgba(0,0,0,0.6) !important;
+        min-width: 320px !important;
+        max-width: 320px !important;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    /* Force the sidebar to hide/show without affecting layout */
+    [data-testid="stSidebar"][aria-expanded="false"] {
+        transform: translateX(-320px) !important;
+        visibility: hidden !important;
+    }
+    
+    [data-testid="stSidebar"][aria-expanded="true"] {
+        transform: translateX(0) !important;
+        visibility: visible !important;
+    }
+
+    /* ====================================================================
+       HIDE STANDARD STREAMLIT CLUTTER
        ==================================================================== */
     [data-testid="stHeader"], 
     .stAppHeader,
     [data-testid="stFooter"],
-    [data-testid="stDecoration"] {
-        display: none !important;
-    }
-
-    /* Tighten up the top spacing */
-    .main .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 1rem !important;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-
-    /* ====================================================================
-       PROFESSIONAL SIDEBAR
-       ==================================================================== */
-    [data-testid="stSidebar"] {
-        background-color: var(--color-bg-medium) !important;
-        border-right: 1px solid var(--color-border) !important;
-        min-width: 300px !important;
-        max-width: 300px !important;
-        transition: all var(--transition-smooth) !important;
-    }
-
-    /* Sidebar toggle button styling */
+    [data-testid="stDecoration"],
     [data-testid="stSidebarCollapsedControl"] {
-        background-color: var(--color-bg-light) !important;
-        border-radius: 8px !important;
-        color: var(--color-primary) !important;
-        top: 10px !important;
-        left: 10px !important;
-        z-index: 10000 !important;
-        border: 1px solid var(--color-border) !important;
+        display: none !important;
     }
 
     /* ====================================================================
