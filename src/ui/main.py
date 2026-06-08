@@ -101,8 +101,9 @@ def inject_layout_css():
         [data-testid="stSidebar"] {
             background: var(--surface) !important;
             border-right: 1px solid var(--border) !important;
-            min-width: 320px !important;
-            max-width: 320px !important;
+            min-width: 300px !important;
+            max-width: 300px !important;
+            transition: all 0.3s ease-in-out !important;
         }
 
         .main .block-container {
@@ -112,76 +113,23 @@ def inject_layout_css():
             padding: 2rem !important;
         }
 
-        /* Large Screens: Lock Sidebar */
-        @media (min-width: 1024px) {
-            [data-testid="stSidebar"] {
-                transform: none !important;
-                visibility: visible !important;
-                display: block !important;
-            }
-            /* Explicitly hide collapse button on large desktop to keep sidebar fixed */
-            [data-testid="stSidebarCollapsedControl"] {
-                display: none !important;
-            }
+        /* Ensure sidebar toggle button is ALWAYS visible and styled */
+        [data-testid="stSidebarCollapsedControl"] {
+            display: flex !important;
+            visibility: visible !important;
+            background-color: var(--surface2) !important;
+            border-radius: 8px !important;
+            color: var(--accent) !important;
+            top: 15px !important;
+            left: 15px !important;
+            z-index: 1000000 !important;
+            border: 1px solid var(--border) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
         }
-
-        /* Responsive Controls (Mobile/Tablet) */
-        @media (max-width: 1023px) {
-            /* Force the toggle to be UNMISSABLE */
-            [data-testid="stSidebarCollapsedControl"], 
-            .st-emotion-cache-zq5wih,
-            button[kind="headerNoContext"] {
-                display: flex !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-                background-color: var(--accent) !important;
-                border-radius: 0 50% 50% 0 !important;
-                left: 0 !important;
-                top: 60px !important; /* Move it down slightly from the header */
-                width: 56px !important;
-                height: 56px !important;
-                z-index: 9999999 !important;
-                box-shadow: 0 0 20px rgba(0, 229, 160, 0.7) !important;
-                animation: pulse-green 2s infinite !important;
-                justify-content: center !important;
-                align-items: center !important;
-            }
-
-            @keyframes pulse-green {
-                0% { box-shadow: 0 0 0 0 rgba(0, 229, 160, 0.7); }
-                70% { box-shadow: 0 0 0 15px rgba(0, 229, 160, 0); }
-                100% { box-shadow: 0 0 0 0 rgba(0, 229, 160, 0); }
-            }
-
-            /* Darken the icon for contrast */
-            [data-testid="stSidebarCollapsedControl"] svg,
-            .st-emotion-cache-zq5wih svg {
-                width: 32px !important;
-                height: 32px !important;
-                fill: #000 !important;
-                color: #000 !important;
-            }
-            .main .block-container {
-                max-width: 95% !important;
-                padding: 1.5rem !important;
-            }
-            [data-testid="stSidebar"] {
-                min-width: 280px !important;
-                max-width: 280px !important;
-            }
-        }
-
-        /* Mobile Devices */
-        @media (max-width: 767px) {
-            .main .block-container {
-                padding: 1rem !important;
-            }
-            .page-header {
-                font-size: 1.2rem !important;
-            }
-            .dashboard-title {
-                font-size: 1.5rem !important;
-            }
+        
+        [data-testid="stSidebarCollapsedControl"]:hover {
+            background-color: var(--accent) !important;
+            color: #000 !important;
         }
 
         /* Sidebar Header and Branding */
@@ -290,18 +238,24 @@ def inject_layout_css():
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 14px;
-            padding: 1rem 1.25rem;
+            padding: 0.75rem 1.25rem;
             margin-bottom: 1.5rem;
             position: sticky;
             top: 0;
             z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .page-header {
             font-family: 'Syne', sans-serif;
-            font-size: 1.55rem;
+            font-size: 1.4rem;
             font-weight: 800;
             margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
 
         .status-pill {
@@ -309,16 +263,16 @@ def inject_layout_css():
             align-items: center;
             gap: 0.5rem;
             color: var(--text2);
-            font-size: 0.9rem;
-            padding: 0.45rem 0.8rem;
+            font-size: 0.85rem;
+            padding: 0.4rem 0.75rem;
             border-radius: 999px;
             background: rgba(255,255,255,0.04);
             border: 1px solid rgba(255,255,255,0.06);
         }
 
         .status-dot {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             box-shadow: 0 0 8px rgba(0, 229, 160, 0.35);
         }
@@ -338,9 +292,23 @@ def inject_layout_css():
             font-weight: 700 !important;
         }
 
-        .button-disabled {
-            opacity: 0.45;
-            pointer-events: none;
+        .menu-toggle-btn {
+            background: var(--surface2) !important;
+            color: var(--accent) !important;
+            border: 1px solid var(--border) !important;
+            padding: 0.5rem 0.8rem !important;
+            border-radius: 8px !important;
+            cursor: pointer !important;
+            font-size: 1.2rem !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.2s !important;
+        }
+
+        .menu-toggle-btn:hover {
+            background: var(--accent) !important;
+            color: #000 !important;
         }
         </style>
         """,
@@ -356,7 +324,7 @@ def render_sidebar_navigation(current_page):
     with st.sidebar:
         st.markdown(
             """
-            <div style="text-align: center; margin-top: 1.5rem; margin-bottom: 1.5rem;">
+            <div style="text-align: center; margin-top: 1rem; margin-bottom: 1.5rem;">
                 <div style="font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 800; color: var(--accent);">VeriFAI LLM</div>
                 <div style="color: var(--text2); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Oxbiy Intelligence</div>
             </div>
@@ -435,12 +403,39 @@ def render_top_bar(current_page):
     semgrep_ready = not st.session_state.get("scan_error", False)
     status_class = "ready" if semgrep_ready else "error"
 
+    # Sidebar Toggle Logic via JS
+    toggle_script = """
+    <script>
+    function toggleSidebar() {
+        const sidebar = window.parent.document.querySelector('section[data-testid="stSidebar"]');
+        const collapseBtn = window.parent.document.querySelector('button[data-testid="stSidebarCollapsedControl"]');
+        if (collapseBtn) {
+            collapseBtn.click();
+        } else {
+            // If button not found, try finding the sidebar and its internal toggle
+            const internalToggle = window.parent.document.querySelector('section[data-testid="stSidebar"] button');
+            if (internalToggle) internalToggle.click();
+        }
+    }
+    </script>
+    """
+    st.markdown(toggle_script, unsafe_allow_html=True)
+
     st.markdown('<div class="topbar">', unsafe_allow_html=True)
     with st.container():
-        cols = st.columns([3, 1, 1, 1, 1])
-        cols[0].markdown(f'<div class="page-header">{page_title}</div>', unsafe_allow_html=True)
-        cols[1].markdown("&nbsp;")
-        cols[2].markdown(
+        # Layout: MenuBtn, Title, Status, Export, Run
+        cols = st.columns([0.5, 3, 1, 1, 1, 1])
+        
+        # Menu Button
+        if cols[0].button("☰", key="menu_toggle", help="Toggle Navigation Sidebar"):
+             st.components.v1.html(
+                "<script>window.parent.document.querySelector('button[data-testid=\"stSidebarCollapsedControl\"]').click();</script>",
+                height=0,
+            )
+
+        cols[1].markdown(f'<div class="page-header">{page_title}</div>', unsafe_allow_html=True)
+        cols[2].markdown("&nbsp;")
+        cols[3].markdown(
             f'<div class="status-pill"><span class="status-dot {status_class}"></span> semgrep ready</div>',
             unsafe_allow_html=True,
         )
@@ -455,7 +450,7 @@ def render_top_bar(current_page):
                         result.get("llm_analysis", ""),
                         result.get("semgrep_results", {}),
                     )
-                    cols[3].download_button(
+                    cols[4].download_button(
                         "Export Report",
                         pdf_bytes,
                         file_name="security_audit.pdf",
@@ -463,18 +458,18 @@ def render_top_bar(current_page):
                         use_container_width=True,
                     )
                 except Exception:
-                    cols[3].button("Export Report", disabled=True, use_container_width=True)
+                    cols[4].button("Export Report", disabled=True, use_container_width=True)
             else:
-                cols[3].button("Export Report", disabled=True, use_container_width=True)
+                cols[4].button("Export Report", disabled=True, use_container_width=True)
         else:
-            cols[3].button("Export Report", disabled=True, use_container_width=True)
+            cols[4].button("Export Report", disabled=True, use_container_width=True)
 
         if current_page == "📊 Security Scanner":
-            if cols[4].button("Run Scan", key="top_run_scan", use_container_width=True, type="primary"):
+            if cols[5].button("Run Scan", key="top_run_scan", use_container_width=True, type="primary"):
                 st.session_state.run_scan_request = True
                 st.rerun()
         else:
-            cols[4].button("Run Scan", disabled=True, use_container_width=True)
+            cols[5].button("Run Scan", disabled=True, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -643,4 +638,3 @@ def main():
 if __name__ == "__main__":
     atexit.register(cleanup_temp_files)
     main()
-
