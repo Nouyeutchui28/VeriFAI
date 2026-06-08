@@ -232,7 +232,7 @@ def render_login_page():
                                 st.error(f"Login failed: {error_msg}")
             
             # Forgot Password Button
-            if st.button("Forgot Password?", key="forgot_pw_btn", use_container_width=True, kind="secondary"):
+            if st.button("Forgot Password?", key="forgot_pw_btn", use_container_width=True, type="secondary"):
                 st.session_state.recovery_mode = True
                 st.rerun()
         
