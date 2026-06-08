@@ -1,6 +1,16 @@
 import streamlit as st
 from src.ui.api_client import get_api_client
 import time
+import re
+
+def is_valid_password(password: str):
+    if len(password) <= 12:
+        return False, "Password must be more than 12 characters long."
+    if not any(char.isdigit() for char in password):
+        return False, "Password must contain at least one number."
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        return False, "Password must contain at least one symbol (!@#$%^&*(),.?\":{}|<>)."
+    return True, ""
 
 def render_login_page():
     """Render professional login page matching malware analyzer theme."""
@@ -175,18 +185,22 @@ def render_login_page():
                         elif new_password != confirm_password:
                             st.error("Passwords do not match")
                         else:
-                            api_client = get_api_client()
-                            with st.spinner("Resetting password..."):
-                                response = api_client.reset_password(st.session_state.recovery_email, otp_code, new_password)
-                                if "error" not in response and "message" not in response:
-                                    st.success("✅ Password reset successfully! You can now sign in.")
-                                    st.session_state.recovery_mode = False
-                                    st.session_state.recovery_email = None
-                                    time.sleep(2)
-                                    st.rerun()
-                                else:
-                                    error_msg = response.get('message', response.get('error', 'Reset failed'))
-                                    st.error(f"❌ {error_msg}")
+                            is_valid, msg = is_valid_password(new_password)
+                            if not is_valid:
+                                st.error(f"❌ {msg}")
+                            else:
+                                api_client = get_api_client()
+                                with st.spinner("Resetting password..."):
+                                    response = api_client.reset_password(st.session_state.recovery_email, otp_code, new_password)
+                                    if "error" not in response and "message" not in response:
+                                        st.success("✅ Password reset successfully! You can now sign in.")
+                                        st.session_state.recovery_mode = False
+                                        st.session_state.recovery_email = None
+                                        time.sleep(2)
+                                        st.rerun()
+                                    else:
+                                        error_msg = response.get('message', response.get('error', 'Reset failed'))
+                                        st.error(f"❌ {error_msg}")
             
             if st.button("⬅️ Back to Login", key="back_from_recovery"):
                 st.session_state.recovery_mode = False
@@ -250,22 +264,26 @@ def render_login_page():
                     elif new_password != confirm_password:
                         st.error("Passwords do not match")
                     else:
-                        api_client = get_api_client()
-                        with st.spinner("Creating account..."):
-                            response = api_client.signup(new_email, new_password)
-                            
-                            if "error" not in response and "message" not in response:
-                                if response.get("requireEmailVerification"):
-                                    st.session_state.otp_verification_email = new_email
-                                    st.success("✅ Account created! Please verify your email.")
-                                    time.sleep(1)
-                                    st.rerun()
+                        is_valid, msg = is_valid_password(new_password)
+                        if not is_valid:
+                            st.error(f"❌ {msg}")
+                        else:
+                            api_client = get_api_client()
+                            with st.spinner("Creating account..."):
+                                response = api_client.signup(new_email, new_password)
+                                
+                                if "error" not in response and "message" not in response:
+                                    if response.get("requireEmailVerification"):
+                                        st.session_state.otp_verification_email = new_email
+                                        st.success("✅ Account created! Please verify your email.")
+                                        time.sleep(1)
+                                        st.rerun()
+                                    else:
+                                        st.success("✅ Account created! Please sign in.")
+                                        time.sleep(1)
                                 else:
-                                    st.success("✅ Account created! Please sign in.")
-                                    time.sleep(1)
-                            else:
-                                error_msg = response.get('message', response.get('error', 'Signup failed'))
-                                st.error(f"Signup failed: {error_msg}")
+                                    error_msg = response.get('message', response.get('error', 'Signup failed'))
+                                    st.error(f"Signup failed: {error_msg}")
 
     st.markdown("""
     <div style="text-align: center; margin-top: 3rem; color: #64748b; font-size: 0.875rem;">
