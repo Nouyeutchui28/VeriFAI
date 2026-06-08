@@ -1,7 +1,7 @@
 import streamlit as st
 
 def apply_custom_styles():
-    """Apply professional malware analyzer theme with Native Overlay Sidebar."""
+    """Apply professional malware analyzer theme with Overlay Sidebar functionality."""
     st.markdown("""
     <style>
     /* ====================================================================
@@ -12,7 +12,6 @@ def apply_custom_styles():
 
     :root {
         --color-primary: #00e5ff;
-        --color-primary-dark: #00b8cc;
         --color-bg-dark: #0a0c0f;
         --color-bg-medium: #1a1d24;
         --color-bg-light: #20242e;
@@ -20,10 +19,7 @@ def apply_custom_styles():
         --color-text: #e8eaf0;
         --color-text-secondary: #8b909e;
         --color-success: #00e5a0;
-        --color-warning: #ffaa00;
         --color-error: #ff4060;
-        --color-danger: #ef4444;
-        --transition-fast: 0.15s ease-out;
         --transition-smooth: 0.3s ease-out;
     }
 
@@ -31,61 +27,72 @@ def apply_custom_styles():
         font-family: 'DM Sans', sans-serif;
         background-color: var(--color-bg-dark);
         color: var(--color-text);
-        scroll-behavior: smooth;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     /* ====================================================================
-       OVERLAY SIDEBAR SYSTEM (NATIVE ABSOLUTE)
+       OVERLAY SIDEBAR SYSTEM
        ==================================================================== */
     
-    /* 1. Main Content: Full width, no shifting */
-    [data-testid="stAppViewContainer"] {
+    /* 1. Main Content: Full width, zero offset */
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewBlockContainer"],
+    [data-testid="stMain"] {
         margin-left: 0 !important;
-    }
-    
-    [data-testid="stAppViewBlockContainer"] {
-        width: 100% !important;
-        max-width: 100% !important;
-        margin-left: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
     }
 
     .main .block-container {
         padding-top: 1rem !important;
-        padding-bottom: 1rem !important;
         max-width: 1200px !important;
         margin: 0 auto !important;
-        transition: none !important;
     }
 
-    /* 2. Sidebar: Detach from flow with Absolute Positioning */
+    /* 2. Sidebar: High-Z Overlay Drawer */
     section[data-testid="stSidebar"] {
-        position: absolute !important;
-        z-index: 999999 !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
         height: 100vh !important;
+        width: 300px !important;
+        min-width: 300px !important;
+        z-index: 9999999 !important;
         background-color: var(--color-bg-medium) !important;
         border-right: 1px solid var(--color-border) !important;
-        box-shadow: 20px 0 50px rgba(0,0,0,0.8) !important;
-        transition: transform 0.3s ease-in-out !important;
+        box-shadow: 20px 0 60px rgba(0,0,0,0.8) !important;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
-    /* Keep native sidebar buttons visible but stylized if needed */
-    [data-testid="stSidebarCollapsedControl"] {
-        opacity: 0.1 !important; /* Semi-hidden but clickable */
-        transition: opacity 0.2s !important;
+    /* Streamlit's native collapsed state styling */
+    [data-testid="stSidebar"][aria-expanded="false"] {
+        transform: translateX(-100%) !important;
+        visibility: hidden !important;
     }
     
-    [data-testid="stSidebarCollapsedControl"]:hover {
-        opacity: 1 !important;
+    [data-testid="stSidebar"][aria-expanded="true"] {
+        transform: translateX(0) !important;
+        visibility: visible !important;
     }
 
-    /* ====================================================================
-       HIDE STANDARD STREAMLIT CLUTTER
-       ==================================================================== */
+    /* Ensure sidebar internal content fits */
+    [data-testid="stSidebarUserContent"] {
+        padding: 2rem 1rem !important;
+    }
+
+    /* Hide standard clutter but keep toggle button clickable in DOM */
     [data-testid="stHeader"], 
     .stAppHeader,
     [data-testid="stFooter"],
     [data-testid="stDecoration"] {
         display: none !important;
+    }
+
+    /* Keep the native toggle hidden but in the flow for JS interaction */
+    [data-testid="stSidebarCollapsedControl"] {
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
 
     /* ====================================================================
@@ -95,21 +102,20 @@ def apply_custom_styles():
         background: var(--color-bg-medium);
         border: 1px solid var(--color-border);
         border-radius: 12px;
-        padding: 0.5rem 1rem;
+        padding: 0.6rem 1rem;
         margin-bottom: 1.5rem;
         position: sticky;
         top: 0;
-        z-index: 999;
+        z-index: 9999;
         display: flex;
         align-items: center;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
 
     .page-header {
         font-family: 'Syne', sans-serif;
         font-size: 1.3rem;
         font-weight: 800;
-        margin: 0;
         margin-left: 1rem;
         color: var(--color-text);
     }
@@ -142,67 +148,29 @@ def apply_custom_styles():
         font-weight: 600;
         text-transform: uppercase;
         font-size: 0.75rem;
-        letter-spacing: 0.5px;
-        transition: all var(--transition-fast) !important;
+        transition: all 0.2s ease-out !important;
     }
 
-    /* Primary buttons */
     [data-testid="stButton"] button[kind="primary"] {
         background-color: var(--color-primary) !important;
         color: #000 !important;
         border: none !important;
-        box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
     }
 
     [data-testid="stButton"] button[kind="primary"]:hover {
         background-color: #00ffff !important;
-        box-shadow: 0 0 20px rgba(0, 229, 255, 0.6);
         transform: translateY(-1px);
     }
 
-    /* Secondary buttons */
     [data-testid="stButton"] button[kind="secondary"] {
         background-color: transparent !important;
         border: 1px solid var(--color-border) !important;
         color: var(--color-text) !important;
     }
 
-    [data-testid="stButton"] button[kind="secondary"]:hover {
-        border-color: var(--color-primary) !important;
-        color: var(--color-primary) !important;
-    }
-
-    /* ====================================================================
-       CARDS & METRICS
-       ==================================================================== */
-    .stMetric {
-        background-color: var(--color-bg-medium) !important;
-        padding: 1rem !important;
-        border-radius: 8px !important;
-        border: 1px solid var(--color-border) !important;
-    }
-
-    .model-chip {
-        margin-top: 1rem;
-        padding: 0.75rem;
-        background: var(--color-bg-light);
-        border: 1px solid var(--color-border);
-        border-radius: 8px;
-    }
-
-    /* ====================================================================
-       TABS
-       ==================================================================== */
+    /* TABS */
     [data-testid="stTabs"] [role="tablist"] {
         border-bottom: 1px solid var(--color-border);
-        gap: 1.5rem;
-    }
-
-    [data-testid="stTabs"] [role="tab"] {
-        color: var(--color-text-secondary);
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.8rem;
     }
 
     [data-testid="stTabs"] [role="tab"][aria-selected="true"] {

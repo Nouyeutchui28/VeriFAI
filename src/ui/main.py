@@ -73,13 +73,13 @@ def render_sidebar_navigation(current_page):
     rules_count = st.session_state.get("rules_loaded_count", 0)
 
     with st.sidebar:
-        # Internal Close Button
-        st.markdown("""
-            <div style="display: flex; justify-content: flex-end; padding: 0.5rem;">
+        # PURE HTML/JS CLOSE BUTTON (Instant response)
+        st.components.v1.html("""
+            <div style="display: flex; justify-content: flex-end;">
                 <button onclick="window.parent.document.querySelector('button[aria-label=\\'Collapse sidebar\\']').click();" 
-                        style="background: transparent; border: none; color: #8b909e; cursor: pointer; font-size: 1.2rem;">✕</button>
+                        style="background: transparent; border: none; color: #8b909e; cursor: pointer; font-size: 1.5rem; padding: 10px;">✕</button>
             </div>
-        """, unsafe_allow_html=True)
+        """, height=50)
 
         st.markdown(
             """
@@ -121,16 +121,18 @@ def render_top_bar(current_page):
 
     st.markdown('<div class="topbar">', unsafe_allow_html=True)
     
+    # 0.5 for Menu Button, 3 for Title, 1 for status, rest for actions
     cols = st.columns([0.5, 3, 1, 1, 1.2, 1])
     
-    # Resilient Menu Toggle
-    if cols[0].button("☰", key="menu_toggle"):
-        st.components.v1.html("""<script>
-            var expandBtn = window.parent.document.querySelector('button[aria-label="Expand sidebar"]');
-            var collapseBtn = window.parent.document.querySelector('button[aria-label="Collapse sidebar"]');
-            if (expandBtn) expandBtn.click();
-            else if (collapseBtn) collapseBtn.click();
-        </script>""", height=0)
+    # PURE HTML/JS MENU TOGGLE (No Rerun)
+    with cols[0]:
+        st.components.v1.html("""
+            <button onclick="window.parent.document.querySelector('button[aria-label=\\'Expand sidebar\\']').click();" 
+                    style="background: #20242e; border: 1px solid rgba(255,255,255,0.06); color: #00e5ff; 
+                           cursor: pointer; font-size: 1.5rem; width: 45px; height: 45px; border-radius: 8px;
+                           display: flex; align-items: center; justify-content: center; transition: all 0.2s;">☰</button>
+            <style>button:hover { background: #00e5ff !important; color: #000 !important; }</style>
+        """, height=50)
 
     cols[1].markdown(f'<div class="page-header">{page_title}</div>', unsafe_allow_html=True)
     
