@@ -48,13 +48,31 @@ def render_login_page():
         height: 1px;
         margin: 1.5rem 0;
     }
-    .forgot-link {
-        color: #38bdf8;
-        font-size: 0.85rem;
-        text-decoration: none;
-        float: right;
-        margin-top: -1.5rem;
-        cursor: pointer;
+    /* CUSTOM BLUE BUTTON STYLING */
+    div.stButton > button:first-child {
+        background-color: #00e5ff !important;
+        color: #000000 !important;
+        font-weight: 700 !important;
+        border: none !important;
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.2) !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #00ffff !important;
+        box-shadow: 0 0 25px rgba(0, 229, 255, 0.5) !important;
+        transform: translateY(-2px) !important;
+    }
+    /* SECONDARY BUTTONS (FORGOT PASSWORD, BACK) */
+    div.stButton > button[kind="secondary"] {
+        background-color: transparent !important;
+        border: 1px solid #1d2b3f !important;
+        color: #e2e8f0 !important;
+    }
+    div.stButton > button[kind="secondary"]:hover {
+        border-color: #00e5ff !important;
+        color: #00e5ff !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -214,7 +232,7 @@ def render_login_page():
                                 st.error(f"Login failed: {error_msg}")
             
             # Forgot Password Button
-            if st.button("Forgot Password?", key="forgot_pw_btn", use_container_width=True):
+            if st.button("Forgot Password?", key="forgot_pw_btn", use_container_width=True, kind="secondary"):
                 st.session_state.recovery_mode = True
                 st.rerun()
         
