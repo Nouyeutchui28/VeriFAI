@@ -230,7 +230,7 @@ def render_patch_review_panel(
 def extract_patched_code(original_code: str, patch_text: str) -> Optional[str]:
     """
     Apply patch to code in memory and return the patched version.
-    This is for preview purposes only.
+    This reconstructs the entire file properly.
     
     Args:
         original_code: Original source code
@@ -241,35 +241,52 @@ def extract_patched_code(original_code: str, patch_text: str) -> Optional[str]:
     """
     import re
     
-    lines = original_code.splitlines(keepends=True)
+    if not original_code or not patch_text:
+        return None
+        
+    orig_lines = original_code.splitlines(keepends=True)
     patch_lines = patch_text.splitlines()
     
-    current_hunk = None
-    old_start = 0
-    old_count = 0
-    new_lines = []
-    line_idx = 0
-    
+    # Parse hunks
+    hunks = []
     for line in patch_lines:
         if line.startswith('@@'):
-            # Parse hunk header
-            match = re.match(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@', line)
-            if match:
-                old_start = int(match.group(1)) - 1
-                old_count = int(match.group(2))
-                current_hunk = True
-                line_idx = old_start
-        elif current_hunk and line.startswith('+') and not line.startswith('+++'):
-            new_lines.append(line[1:] + '\n')
-        elif current_hunk and line.startswith('-') and not line.startswith('---'):
-            line_idx += 1
-        elif current_hunk and not line.startswith('\\'):
-            # Context line
-            if line_idx < len(lines):
-                new_lines.append(lines[line_idx])
-                line_idx += 1
+            hunks.append({'header': line, 'lines': []})
+        elif hunks and not line.startswith('---') and not line.startswith('+++'):
+            hunks[-1]['lines'].append(line)
+            
+    if not hunks:
+        return None
+
+    new_lines = []
+    orig_index = 0
     
-    # Build result
-    if new_lines:
-        return ''.join(new_lines)
-    return None
+    for hunk in hunks:
+        match = re.match(r"@@ -(\d+),(\d+) \+(\d+),(\d+) @@", hunk['header'])
+        if not match:
+            continue
+        old_start = int(match.group(1)) - 1
+        
+        # Add unchanged lines before the hunk
+        while orig_index < old_start and orig_index < len(orig_lines):
+            new_lines.append(orig_lines[orig_index])
+            orig_index += 1
+            
+        # Apply hunk lines
+        for hl in hunk['lines']:
+            if hl.startswith('+') and not hl.startswith('+++'):
+                new_lines.append(hl[1:] + '\n')
+            elif hl.startswith('-') and not hl.startswith('---'):
+                orig_index += 1
+            else:
+                # context line
+                if orig_index < len(orig_lines):
+                    new_lines.append(orig_lines[orig_index])
+                    orig_index += 1
+                    
+    # Append remaining original lines
+    while orig_index < len(orig_lines):
+        new_lines.append(orig_lines[orig_index])
+        orig_index += 1
+        
+    return ''.join(new_lines)
