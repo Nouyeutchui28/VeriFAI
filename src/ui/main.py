@@ -617,14 +617,19 @@ def main():
             
             if patch_text and patch_text.strip() and patch_text != "No patch suggestions.":
                 patched_code = extract_patched_code(code_content, patch_text) if code_content else None
-                render_patch_review_panel(
-                    patch_text=patch_text,
-                    original_code=code_content,
-                    patched_code=patched_code,
-                    target_path=results.get("target_path", ""), # Original path for zipping
-                    patch_root=patch_target,                  # Root dir for applying patches
-                    patch_file_path=results.get("patch_file_path", ""),
-                )
+                try:
+                    render_patch_review_panel(
+                        patch_text=patch_text,
+                        original_code=code_content,
+                        patched_code=patched_code,
+                        target_path=results.get("target_path", ""), # Original path for zipping
+                        patch_root=patch_target,                  # Root dir for applying patches
+                        patch_file_path=results.get("patch_file_path", ""),
+                    )
+                except Exception as e:
+                    st.error(f"⚠️ Unable to render interactive patch review panel. The patch diff may be malformed or incompatible with this file. Please review the patch text manually.")
+                    with st.expander("View Raw Patch Diff"):
+                        st.code(patch_text, language="diff")
             else:
                 st.info("No patch suggestions available for the last scan.")
         else:

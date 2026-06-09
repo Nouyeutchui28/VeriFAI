@@ -1,4 +1,6 @@
 import streamlit as st
+import json
+import os
 from typing import Any, Optional
 
 class AppState:
@@ -38,6 +40,20 @@ class AppState:
         for key, default_value in AppState.DEFAULTS.items():
             if key not in st.session_state:
                 st.session_state[key] = default_value
+                
+        # Persist login across refreshes
+        session_file = ".auth_session.json"
+        if os.path.exists(session_file) and not st.session_state.authenticated:
+            try:
+                with open(session_file, "r") as f:
+                    data = json.load(f)
+                    st.session_state.authenticated = data.get("authenticated", False)
+                    st.session_state.user_info = data.get("user_info")
+                    st.session_state.access_token = data.get("access_token")
+                    st.session_state.user_id = data.get("user_id")
+                    st.session_state.legal_agreed = data.get("legal_agreed", False)
+            except Exception:
+                pass
 
     @staticmethod
     def logout() -> None:
@@ -46,6 +62,11 @@ class AppState:
         st.session_state.user_info = None
         st.session_state.access_token = None
         st.session_state.user_id = None
+        try:
+            if os.path.exists(".auth_session.json"):
+                os.remove(".auth_session.json")
+        except Exception:
+            pass
         st.rerun()
 
     @staticmethod
@@ -64,6 +85,15 @@ class AppState:
     def set(key: str, value: Any) -> None:
         """Set a value in session state."""
         st.session_state[key] = value
+        if key == "legal_agreed" and value is True:
+            try:
+                with open(".auth_session.json", "r") as f:
+                    data = json.load(f)
+                data["legal_agreed"] = True
+                with open(".auth_session.json", "w") as f:
+                    json.dump(data, f)
+            except Exception:
+                pass
 
     @staticmethod
     def reset(key: str) -> None:
@@ -96,3 +126,15 @@ class AppState:
         st.session_state.user_info = user_info
         st.session_state.access_token = access_token
         st.session_state.user_id = user_id
+        
+        try:
+            with open(".auth_session.json", "w") as f:
+                json.dump({
+                    "authenticated": True,
+                    "user_info": user_info,
+                    "access_token": access_token,
+                    "user_id": user_id,
+                    "legal_agreed": st.session_state.get("legal_agreed", False)
+                }, f)
+        except Exception:
+            pass

@@ -647,8 +647,9 @@ def unsafe_pickle():
                 }.get(severity, 'severity-low')
 
                 with st.expander(f"{title} — {location}"):
+                    lines_code = finding.get("extra", {}).get("lines", "")
                     st.markdown(
-                        f'<div class="finding-card"><div class="finding-header"><div><p class="finding-title">{title}</p><p style="margin:0; color:#8b909e;">{location}</p></div><span class="severity-badge {badge_style}">{severity.upper()}</span></div><p style="color:#cbd5e1; margin-bottom:0.85rem;">{description}</p><pre style="color:#e8eaf0; background: #0f172a; border-radius: 10px; padding: 0.85rem; overflow:auto;">{finding.get('extra', {}).get('lines', '')}</pre></div>',
+                        f'<div class="finding-card"><div class="finding-header"><div><p class="finding-title">{title}</p><p style="margin:0; color:#8b909e;">{location}</p></div><span class="severity-badge {badge_style}">{severity.upper()}</span></div><p style="color:#cbd5e1; margin-bottom:0.85rem;">{description}</p><pre style="color:#e8eaf0; background: #0f172a; border-radius: 10px; padding: 0.85rem; overflow:auto;">{lines_code}</pre></div>',
                         unsafe_allow_html=True,
                     )
     return None

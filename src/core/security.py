@@ -205,10 +205,7 @@ def _build_semgrep_command(target_path, metrics_enabled=False):
         "--disable-version-check",
         "--output",
         "results/res.json",
-        "--config=p/python",
-        "--config=p/javascript",
-        "--config=p/secrets",
-        "--config=p/default", # Use the most stable community default
+        "--config=auto",
         "--timeout",
         "60", # Reduce per-file timeout for speed
         "--error", 
