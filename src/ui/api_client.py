@@ -365,6 +365,26 @@ class VeriFAILLMAPIClient:
             logger.error(f"DB Update Result error: {str(e)}")
             return {"error": str(e)}
 
+    def get_results_insforge(self, scan_id: str) -> Dict:
+        """Fetch analysis results from InsForge Database."""
+        try:
+            response = requests.get(
+                f"{self.rest_url}/results?scan_id=eq.{scan_id}",
+                headers={
+                    "apikey": self.api_key,
+                    "Authorization": f"Bearer {self.token}",
+                    "Content-Type": "application/json"
+                },
+                timeout=15
+            )
+            if not response.ok:
+                return {"error": response.text}
+            results = response.json()
+            return results[0] if isinstance(results, list) and results else {"error": "No results found for this scan."}
+        except Exception as e:
+            logger.error(f"DB Get Result error: {str(e)}")
+            return {"error": str(e)}
+
     # Admin Management methods
     def get_all_users_insforge(self) -> Dict:
         """Fetch all users from InsForge (Admin)."""
@@ -406,7 +426,7 @@ class VeriFAILLMAPIClient:
     def get_scan_history_insforge(self, limit: int = 15) -> List[Dict]:
         """Fetch scan history directly from InsForge for real-time dashboard updates."""
         try:
-            user_id = st.session_state.user_info.get("id")
+            user_id = st.session_state.get("user_id") or (st.session_state.user_info.get("id") if st.session_state.get("user_info") else None)
             if not user_id:
                 return []
 
@@ -427,7 +447,7 @@ class VeriFAILLMAPIClient:
     def get_summary_stats_insforge(self) -> Dict:
         """Fetch summary statistics for the dashboard using real data."""
         try:
-            user_id = st.session_state.user_info.get("id")
+            user_id = st.session_state.get("user_id") or (st.session_state.user_info.get("id") if st.session_state.get("user_info") else None)
             if not user_id:
                 return {"total_scans": 0, "vulnerabilities": 0, "fixed_issues": 0, "security_score": 100}
 
@@ -487,7 +507,7 @@ class VeriFAILLMAPIClient:
     def get_severity_stats_insforge(self) -> Dict:
         """Fetch severity distribution for charts."""
         try:
-            user_id = st.session_state.user_info.get("id")
+            user_id = st.session_state.get("user_id") or (st.session_state.user_info.get("id") if st.session_state.get("user_info") else None)
             if not user_id:
                 return {"Critical": 0, "High": 0, "Medium": 0, "Low": 0}
 

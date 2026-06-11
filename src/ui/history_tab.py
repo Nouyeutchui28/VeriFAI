@@ -12,13 +12,9 @@ def render_history_tab():
     
     try:
         with st.spinner("Fetching scan history..."):
-            # Use the InsForge specific method
-            response = api_client.get_all_scans_insforge()
+            # Use user-specific history method
+            response = api_client.get_scan_history_insforge(limit=50)
             
-            if isinstance(response, dict) and "error" in response:
-                st.error(f"Failed to fetch history: {response['error']}")
-                return
-
             if not response:
                 st.info("No scans found in your history. Start by running a new scan!")
                 return
@@ -32,7 +28,7 @@ def render_history_tab():
                 display_df['start_time'] = pd.to_datetime(display_df['start_time']).dt.strftime('%Y-%m-%d %H:%M')
             
             # Reorder and rename columns for UI
-            cols_to_show = ['id', 'project_name', 'status', 'start_time']
+            cols_to_show = ['project_name', 'status', 'start_time']
             available_cols = [c for c in cols_to_show if c in display_df.columns]
             display_df = display_df[available_cols]
             
@@ -48,7 +44,8 @@ def render_history_tab():
             
             if st.button("📂 Load Results", type="primary", use_container_width=True):
                 with st.spinner("Loading analysis results..."):
-                    results_res = api_client.get_results(selected_scan_id)
+                    # Use InsForge specific result fetch
+                    results_res = api_client.get_results_insforge(selected_scan_id)
                     
                     if "error" not in results_res:
                         # Reconstruct the analysis results state
