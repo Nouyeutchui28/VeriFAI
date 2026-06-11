@@ -6,3 +6,4 @@ venv/
 docs/assets/
 temp_*/
 __pycache__/
+.env

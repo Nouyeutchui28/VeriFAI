@@ -581,9 +581,25 @@ def main():
     if not AppState.get("legal_agreed"):
         @st.dialog("⚖️ Legal & Ethical Usage Warning")
         def show_legal_warning():
-            st.warning("### IMPORTANT: AUTHORIZED USE ONLY")
-            st.markdown("You must agree to use this tool only on authorized codebases for defensive research.")
-            if st.button("I Agree & Understand", type="primary", use_container_width=True):
+            st.warning("### 🚨 CRITICAL: AUTHORIZED USE ONLY")
+            
+            st.markdown("""
+            This tool is designed for **defensive security research** and **authorized testing** only. Using this tool on systems or codebases you do not own or have explicit, written permission to test is **illegal and unethical**.
+
+            #### ⚠️ Legal Dangers of Unauthorized Use
+            *   **Criminal Liability:** Scanning or accessing unauthorized systems may violate the **Computer Fraud and Abuse Act (CFAA)** or similar international cybercrime laws, leading to heavy fines or imprisonment.
+            *   **Civil Lawsuits:** Owners of unauthorized targets can sue for damages, even if no harm was intended.
+            *   **Employment/Academic Risk:** Unauthorized testing can result in immediate termination or expulsion.
+
+            #### 🔒 Important Security Aspects
+            1.  **AI Hallucinations:** AI-generated security patches (remediations) may be incorrect or introduce new bugs. **Always manually review and test every patch** in a safe environment before deployment.
+            2.  **Data Privacy:** Code sent for analysis may be processed by external APIs (Hugging Face). Ensure you do not scan code containing sensitive secrets, PII, or proprietary information unless authorized.
+            3.  **No Guarantee:** This tool assists in detection but does not guarantee 100% security. It should be part of a broader security strategy.
+            """)
+            
+            st.info("By clicking below, you certify that you have the legal right to scan the targets you provide and accept full responsibility for your actions.")
+            
+            if st.button("I Agree, Understand, & Accept Responsibility", type="primary", use_container_width=True):
                 AppState.set("legal_agreed", True)
                 st.rerun()
         show_legal_warning()
