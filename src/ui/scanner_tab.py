@@ -254,30 +254,37 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
             
             report = generate_report(code_content, sem_res, combined_analysis)
             
-            # Backend Persistence (Simplified for speed)
+            # Backend Persistence
             result_id = str(uuid.uuid4())
             try:
                 from .api_client import get_api_client
                 api_client = get_api_client()
                 sc_id = str(uuid.uuid4())
-                u_id = st.session_state.get("user_info", {}).get("id", "anonymous_user")
+                u_id = st.session_state.get("user_id") or st.session_state.get("user_info", {}).get("id", "anonymous_user")
 
-                api_client.save_scan_insforge({
+                save_scan_resp = api_client.save_scan_insforge({
                     "id": sc_id, "user_id": u_id, "status": "complete",
                     "project_name": actual_filename, "start_time": datetime.now().isoformat(),
                     "end_time": datetime.now().isoformat(),
                 })
+                
+                if isinstance(save_scan_resp, dict) and "error" in save_scan_resp:
+                    logger.warning(f"Scan save failed: {save_scan_resp['error']}")
 
                 sev_c = {}
                 for r in findings:
                     s = r.get("severity", "unknown").lower()
                     sev_c[s] = sev_c.get(s, 0) + 1
 
-                api_client.save_result_insforge({
+                save_res_resp = api_client.save_result_insforge({
                     "id": result_id, "scan_id": sc_id, "code_snippet": code_content[:2000],
                     "semgrep_json": sem_res, "llm_analysis": combined_analysis,
                     "patches": combined_patch, "severity_count": sev_c,
                 })
+                
+                if isinstance(save_res_resp, dict) and "error" in save_res_resp:
+                    logger.warning(f"Result save failed: {save_res_resp['error']}")
+                    
             except Exception as e:
                 logger.error(f"Backend persistence failed: {e}")
                 sev_c = {r.get("severity", "low").lower(): 1 for r in findings} # Fallback
