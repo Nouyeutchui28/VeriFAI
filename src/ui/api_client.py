@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import os
-from src.core.retry_utils import retry_callable, CircuitBreaker
+from ..core.retry_utils import retry_callable, CircuitBreaker
 
 # Allow overriding backend URLs via environment variables or Streamlit secrets
 API_BASE_URL = os.environ.get("VERIFAI_API_BASE_URL") or "http://localhost:8001/api"
