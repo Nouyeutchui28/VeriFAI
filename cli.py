@@ -99,7 +99,7 @@ def main():
         code_content = f"Target is a directory: {target_path}. See Semgrep results."
 
     # 2. AI Analysis
-    print("[*] Initializing AI Deep Reasoning (Qwen2.5-Coder-7B-Instruct)...")
+    print("[*] Initializing AI Deep Reasoning (Qwen2.5-Coder-32B-Instruct)...")
 
 
     print("[*] Performing Deep-Trace Analysis...")

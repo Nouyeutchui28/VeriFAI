@@ -23,7 +23,7 @@ class AppState:
         "otp_verification_email": None,
         "github_repo_path": None,
         "github_repo_url": None,
-        "model_selection": "Qwen2.5-Coder-7B-Instruct",
+        "model_selection": "Qwen2.5-Coder-32B-Instruct",
         "llm_temperature": 0.2,
         "theme": "dark",
         "notifications_enabled": True,

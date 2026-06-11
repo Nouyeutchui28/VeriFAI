@@ -389,10 +389,10 @@ def render_sidebar_navigation(current_page):
         f"""
         <div class="model-chip">
             <div style="font-weight: 700; color: var(--text); font-size: 0.85rem;">
-                <span class="live-dot"></span> Qwen2.5-Coder-7B
+                <span class="live-dot"></span> Qwen2.5-Coder-32B
             </div>
             <div style="color: var(--text3); font-size: 0.75rem; margin-top: 0.25rem;">
-                Engine: Hugging Face AI
+                Engine: Hugging Face AI (Ultra)
             </div>
         </div>
         """,
@@ -618,7 +618,7 @@ def render_dashboard_fragment():
         st.markdown(f"""
             <div class="model-chip" style="margin-top:0;">
                 <div class="chip-title"><span class="status-dot ready"></span> AI Engine</div>
-                <div class="chip-subtitle">Local Qwen2.5-Coder (Hugging Face)</div>
+                <div class="chip-subtitle">Local Qwen2.5-Coder-32B (Hugging Face)</div>
             </div>
         """, unsafe_allow_html=True)
     with s3:

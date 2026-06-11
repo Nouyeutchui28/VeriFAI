@@ -31,7 +31,7 @@ def render_settings_tab():
         with col1:
             render_settings_group("Model Selection", "🤖", "Hugging Face Inference API Active")
             model_options = [
-                "Qwen/Qwen2.5-Coder-7B-Instruct"
+                "Qwen/Qwen2.5-Coder-32B-Instruct"
             ]
             selected_model = st.selectbox(
                 "Intelligence Model",
@@ -40,7 +40,7 @@ def render_settings_tab():
                 key="settings_model_select",
                 label_visibility="collapsed"
             )
-            st.info("🚀 Hugging Face API Complete: Using Qwen2.5-Coder-7B-Instruct.")
+            st.info("🚀 Hugging Face API Complete: Using Qwen2.5-Coder-32B-Instruct.")
 
         with col2:
             render_settings_group("Response Variation", "🎲", "Creativity vs Consistency")
@@ -382,7 +382,7 @@ def render_settings_tab():
 
         # Hugging Face Status
         st.markdown("**Hugging Face Intelligence Engine**")
-        st.success("✅ System Context: Qwen2.5-Coder-7B-Instruct Active")
+        st.success("✅ System Context: Qwen2.5-Coder-32B-Instruct Active")
         st.caption("The pipeline is now running using Hugging Face Serverless Inference API.")
 
         st.divider()

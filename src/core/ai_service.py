@@ -5,7 +5,7 @@ from huggingface_hub import InferenceClient
 
 logger = logging.getLogger(__name__)
 
-HF_MODEL_ID = "Qwen/Qwen2.5-Coder-7B-Instruct"
+HF_MODEL_ID = "Qwen/Qwen2.5-Coder-32B-Instruct"
 
 def get_ai_response(prompt: str, system_message: str = "", temperature: float = 0.2, max_tokens: int = 2048):
     """
