@@ -10,7 +10,7 @@ pytest-cov>=4.0.0
 semgrep>=1.0.0
 fpdf2>=2.7.0
 PyGithub>=1.59.0
-protobuf>=5.26.1
+protobuf>=3.20,<5
 
 # Backend dependencies
 fastapi>=0.104.1
