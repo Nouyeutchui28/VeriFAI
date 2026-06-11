@@ -59,26 +59,25 @@ Before you begin, ensure you have the following installed:
 
 ---
 
-## 🏃 Running the Application
+## 🚀 Deployment
 
-### Method 1: All-in-One (Recommended)
+### Method 1: All-in-One (Local)
 ```bash
 streamlit run app.py
 ```
 
-### Method 2: Manual Backend & Frontend (For Developers)
-```bash
-# Terminal 1: Start Backend API
-python -m uvicorn src.api.main:app --port 8000
+### Method 2: Render (Cloud)
+VeriFAI LLM is pre-configured for **Render**.
+1.  **Fork** this repository to your GitHub account.
+2.  Log in to [Render](https://render.com/).
+3.  Click **New +** > **Blueprint**.
+4.  Connect your GitHub repository.
+5.  Render will automatically detect the `render.yaml` file and set up:
+    *   The Streamlit Web Service.
+    *   Necessary environment variables.
+6.  Go to the **Environment** settings of your new service and add your `HF_TOKEN`.
 
-# Terminal 2: Start Streamlit UI
-streamlit run app.py --server.port 8501
-```
-
----
-
-## 🐳 Docker Deployment (Optional)
-
+### Method 3: Docker (Custom)
 If you prefer using Docker:
 ```bash
 # Build the image
@@ -92,17 +91,10 @@ docker run -p 8501:8501 --env-file .env verifai-llm
 
 ## ✅ Post-Installation Checklist
 
-1.  Open `http://localhost:8501` in your browser.
+1.  Open `http://localhost:8501` (or your Render URL) in your browser.
 2.  **Sign In:** Create a new account or log in.
 3.  **Check Sidebar:** Verify that it says **✅ Qwen2.5-Coder-32B Active**.
-4.  **Test Scan:** Paste the following into the Scanner:
-    ```python
-    import sqlite3
-    db = sqlite3.connect("test.db")
-    user_id = input()
-    db.execute(f"SELECT * FROM users WHERE id = {user_id}") # SQL Injection!
-    ```
-5.  **Verify Results:** Ensure the scanner detects the SQL Injection and suggests a parameterized query fix.
+4.  **Test Scan:** Paste a sample vulnerable script and verify detection.
 
 ---
 
@@ -110,7 +102,7 @@ docker run -p 8501:8501 --env-file .env verifai-llm
 
 | Issue | Solution |
 | :--- | :--- |
-| **Model Error (401/403)** | Your `HF_TOKEN` is invalid or missing. Update it in `.env`. |
+| **Model Error (401/403)** | Your `HF_TOKEN` is invalid or missing. Update it in `.env` or Render settings. |
 | **Semgrep Not Found** | Ensure `semgrep` is in your PATH. Try `pip install semgrep`. |
 | **Login Persistence Fails** | Check if the file `.auth_session.json` is writable. |
 | **Dashboard Zeros** | Run at least one scan to populate the dashboard metrics. |
