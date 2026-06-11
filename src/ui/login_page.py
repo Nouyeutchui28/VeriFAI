@@ -1,6 +1,6 @@
 import streamlit as st
-from src.ui.api_client import get_api_client
-from src.utils.state import AppState
+from .api_client import get_api_client
+from ..utils.state import AppState
 import time
 import re
 
