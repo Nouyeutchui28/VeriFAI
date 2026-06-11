@@ -17,9 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && python -m pip install semgrep
 
 # Create directories with correct permissions
-RUN mkdir -p temp_uploads temp_code results configs \
+RUN mkdir -p temp_uploads temp_code temp_github results configs \
     && chown -R appuser:appuser /app \
-    && chmod 755 temp_uploads temp_code results configs
+    && chmod 755 temp_uploads temp_code temp_github results configs
 
 # Copy application code with correct ownership
 COPY --chown=appuser:appuser . .

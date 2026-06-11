@@ -150,107 +150,133 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
 
             if st.button("🔐 Run Security Scan", key="github_scan"):
                 try:
+                    from concurrent.futures import ThreadPoolExecutor, as_completed
+                    from ..core.security import unified_security_scan, resolve_local_dependencies
+                    from .api_client import get_api_client
+                    import uuid
+
                     progress_placeholder = st.empty()
                     status_placeholder = st.empty()
 
                     with status_placeholder.status("🔍 Initializing Repository Scan...", expanded=True) as status:
-                        # Step 1: Semgrep
-                        status.update(label="🚀 Running Semgrep Static Analysis... (Step 1/5)", state="running")
+                        # Step 1: Semgrep Static Analysis
+                        status.update(label="🚀 Running Semgrep Static Analysis... (Step 1/4)", state="running")
                         progress_placeholder.progress(0.1, text="Analyzing repository patterns with Semgrep...")
                         semgrep_results = run_semgrep_scan(repo_path, metrics_enabled)
+                        findings = semgrep_results.get("results", [])
 
-                        # Step 2: Code Extraction
-                        status.update(label="📂 Extracting Code Samples... (Step 2/5)", state="running")
-                        progress_placeholder.progress(0.3, text="Gathering code for AI review...")
-                        code_samples = get_code_samples_from_repo(repo_path)
-                        code_content = "\n\n".join([
-                            f"File: {sample['path']}\n```\n{sample['content']}\n```"
-                            for sample in code_samples
-                        ])
-                        patch_file_path = code_samples[0]['path'] if code_samples else os.path.basename(repo_path)
+                        # Step 2: Parallel AI Analysis & Patching
+                        status.update(label="🤖 Running AI Security Analysis... (Step 2/4)", state="running")
+                        progress_placeholder.progress(0.3, text="Initializing AI engine for deep repository review...")
+                        
+                        # Identify all unique flagged files
+                        flagged_files = list(set([f.get("path") for f in findings if f.get("path")]))
+                        
+                        # HEURISTIC: If no findings, at least analyze the first primary file
+                        if not flagged_files:
+                            from ..core.file_utils import extract_primary_code_sample
+                            _, primary_rel = extract_primary_code_sample(repo_path)
+                            if primary_rel:
+                                flagged_files = [primary_rel]
+                        
+                        # Limit to top 15 files for performance
+                        flagged_files = flagged_files[:15]
+                        
+                        all_llm_analyses = []
+                        all_patches = []
+                        primary_code_content = ""
 
-                        if not code_content:
-                            code_content = "Repository analyzed but no readable code files found."
+                        def process_repo_file(file_rel_path):
+                            full_path = os.path.join(repo_path, file_rel_path)
+                            if not os.path.exists(full_path):
+                                return None, None, None
+                            
+                            try:
+                                with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+                                    file_code = f.read(8000)
+                                
+                                # Resolve dependencies
+                                context_files = {}
+                                deps = resolve_local_dependencies(file_code, repo_path)
+                                for d_rel, d_full in deps:
+                                    try:
+                                        with open(d_full, "r", encoding="utf-8", errors="ignore") as df:
+                                            context_files[d_rel] = df.read(2000)
+                                    except: pass
+                                
+                                analysis, patch = unified_security_scan(semgrep_results, file_code, None, file_path=file_rel_path, context_files=context_files)
+                                return analysis, patch, file_code
+                            except Exception as e:
+                                return None, None, None
 
-                        # Step 3: LLM Analysis
-                        status.update(label="🤖 Running AI Security Analysis (Local)... (Step 3/5)", state="running")
-                        progress_placeholder.progress(0.5, text="Leveraging Local AI for deep vulnerability review...")
-                        llm_analysis = run_llm_analysis(
-                            code_content,
-                            semgrep_results,
-                            llm_temperature,
-                            model_selection
-                        )
+                        with ThreadPoolExecutor(max_workers=3) as executor:
+                            future_to_file = {executor.submit(process_repo_file, f): f for f in flagged_files}
+                            completed_count = 0
+                            for future in as_completed(future_to_file):
+                                fname = future_to_file[future]
+                                try:
+                                    analysis, patch, fcode = future.result()
+                                    if analysis:
+                                        all_llm_analyses.append(f"### 📄 File: {fname}\n{analysis}")
+                                    if patch and patch != "No patch suggestions.":
+                                        all_patches.append(patch)
+                                    if not primary_code_content and fcode:
+                                        primary_code_content = fcode
+                                except: pass
+                                
+                                completed_count += 1
+                                progress_placeholder.progress(0.3 + (0.4 * (completed_count / len(flagged_files))), 
+                                                           text=f"Analyzing: {completed_count}/{len(flagged_files)} vulnerable files...")
 
-                        # Step 4: Patch Generation
-                        status.update(label="🛠️ Generating Patch Suggestions... (Step 4/5)", state="running")
-                        progress_placeholder.progress(0.7, text="Creating remediation patches...")
-                        try:
-                            patch_suggestions = generate_patch_suggestions(
-                                semgrep_results,
-                                code_content[:3000],
-                                None,
-                                file_path=patch_file_path
-                            )
-                        except:
-                            patch_suggestions = ""
+                        combined_analysis = "\n\n---\n\n".join(all_llm_analyses) or "⚠️ No vulnerabilities found in AI deep-scan. Review Semgrep results."
+                        combined_patch = "\n\n".join(all_patches) or "No patch suggestions."
 
-                        # Step 5: Report & Persist
-                        status.update(label="💾 Finalizing & Saving Results... (Step 5/5)", state="running")
-                        progress_placeholder.progress(0.9, text="Generating report and persisting results...")
-                        report = generate_report(
-                            f"GitHub Repository: {st.session_state.github_repo_url}",
-                            llm_analysis
-                        )
+                        # Step 3: Build & Save
+                        status.update(label="📄 Building Security Report... (Step 3/4)", state="running")
+                        progress_placeholder.progress(0.8, text="Finalizing report and persisting results...")
+                        
+                        report = generate_report(f"GitHub: {st.session_state.github_repo_url}", combined_analysis)
                         
                         # Persist to Backend
-                        from .api_client import get_api_client
-                        import uuid
                         api_client = get_api_client()
                         sc_id = str(uuid.uuid4())
+                        u_id = st.session_state.get("user_id") or st.session_state.get("user_info", {}).get("id", "anonymous_user")
+                        
                         api_client.save_scan_insforge({
-                            "id": sc_id, 
-                            "user_id": st.session_state.user_info.get("id"), 
-                            "status": "complete", 
-                            "project_name": f"GitHub: {extract_repo_info(st.session_state.github_repo_url)['name']}", 
-                            "start_time": datetime.now().isoformat(), 
-                            "end_time": datetime.now().isoformat()
+                            "id": sc_id, "user_id": u_id, "status": "complete",
+                            "project_name": f"GitHub: {extract_repo_info(st.session_state.github_repo_url)[1]}",
+                            "start_time": datetime.now().isoformat(), "end_time": datetime.now().isoformat(),
                         })
                         
                         sev_c = {}
-                        if "results" in semgrep_results:
-                            for r in semgrep_results["results"]:
-                                s = r.get("severity", "unknown").lower()
-                                sev_c[s] = sev_c.get(s, 0) + 1
+                        for r in findings:
+                            s = r.get("severity", "unknown").lower()
+                            sev_c[s] = sev_c.get(s, 0) + 1
                         
                         result_id = str(uuid.uuid4())
                         api_client.save_result_insforge({
-                            "id": result_id, 
-                            "scan_id": sc_id, 
-                            "code_snippet": code_content[:5000], 
-                            "semgrep_json": semgrep_results, 
-                            "llm_analysis": llm_analysis, 
-                            "patches": patch_suggestions, 
-                            "severity_count": sev_c
+                            "id": result_id, "scan_id": sc_id, "code_snippet": primary_code_content[:2000],
+                            "semgrep_json": semgrep_results, "llm_analysis": combined_analysis,
+                            "patches": combined_patch, "severity_count": sev_c,
                         })
 
-                        results = {
-                            'result_id': result_id,
-                            'code_content': code_content,
-                            'llm_analysis': llm_analysis,
-                            'semgrep_results': semgrep_results,
-                            'report': report,
-                            'patch_suggestions': patch_suggestions,
-                            'target_path': repo_path,
-                            'patch_file_path': patch_file_path,
-                            'severity_count': sev_c
+                        # Step 4: Finalize
+                        st.session_state.analysis_results = {
+                            "result_id": result_id,
+                            "code_content": primary_code_content,
+                            "llm_analysis": combined_analysis,
+                            "semgrep_results": semgrep_results,
+                            "report": report,
+                            "patch_suggestions": combined_patch,
+                            "target_path": repo_path,
+                            "patch_file_path": flagged_files[0] if flagged_files else "",
+                            "severity_count": sev_c
                         }
-                        st.session_state.analysis_results = results
                         
                         progress_placeholder.progress(1.0, text="Scan complete!")
                         status.update(label="✅ Repository Analysis Complete!", state="complete", expanded=False)
 
-                    st.success("✅ Analysis complete and saved to backend!")
+                    st.success("✅ Analysis complete! Results are ready.")
                     st.balloons()
                     st.rerun()
 

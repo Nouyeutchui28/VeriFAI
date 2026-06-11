@@ -25,14 +25,19 @@ def extract_repo_info(url: str) -> Tuple[str, str]:
 def clone_repository(url: str, target_dir: str, timeout: int = 300) -> str:
     """
     Clone GitHub repository to target directory.
-    Returns the path to the cloned repository.
-    Raises subprocess.CalledProcessError if clone fails.
+    Supports GITHUB_TOKEN for private repositories.
     """
     os.makedirs(target_dir, exist_ok=True)
+    
+    # Authenticate URL if token is available
+    token = os.getenv("GITHUB_TOKEN")
+    clone_url = url
+    if token and "github.com" in url and "@" not in url:
+        clone_url = url.replace("https://", f"https://x-access-token:{token}@")
 
     try:
         result = subprocess.run(
-            ['git', 'clone', '--depth', '1', url],
+            ['git', 'clone', '--depth', '1', clone_url, '.'],
             cwd=target_dir,
             capture_output=True,
             text=True,
@@ -40,13 +45,8 @@ def clone_repository(url: str, target_dir: str, timeout: int = 300) -> str:
             check=True
         )
 
-        owner, repo = extract_repo_info(url)
-        repo_path = os.path.join(target_dir, repo)
-
-        if not os.path.exists(repo_path):
-            raise RuntimeError(f"Repository directory not found at {repo_path}")
-
-        return repo_path
+        # For the '.' clone, the repo_path is target_dir itself
+        return target_dir
 
     except subprocess.TimeoutExpired:
         raise TimeoutError(f"Git clone timed out after {timeout} seconds")
