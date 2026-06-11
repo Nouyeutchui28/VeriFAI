@@ -7,3 +7,4 @@ docs/assets/
 temp_*/
 __pycache__/
 .env
+.auth_session.json

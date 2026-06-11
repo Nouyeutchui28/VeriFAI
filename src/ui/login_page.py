@@ -125,10 +125,11 @@ def render_login_page():
                             response = api_client.verify_token_insforge(st.session_state.otp_verification_email, otp_code)
 
                             if "error" not in response and "message" not in response:
-                                st.session_state.access_token = response.get("accessToken")
-                                st.session_state.user_info = response.get("user")
-                                st.session_state.user_id = response.get("user", {}).get("id")
-                                st.session_state.authenticated = True
+                                AppState.set_auth(
+                                    user_info=response.get("user"),
+                                    access_token=response.get("accessToken"),
+                                    user_id=response.get("user", {}).get("id")
+                                )
                                 st.session_state.otp_verification_email = None
                                 st.success("✅ Email verified successfully!")
                                 time.sleep(1)
@@ -228,10 +229,11 @@ def render_login_page():
                             response = api_client.signin(email, password)
                             
                             if "error" not in response and "message" not in response:
-                                st.session_state.access_token = response.get("accessToken")
-                                st.session_state.user_info = response.get("user")
-                                st.session_state.user_id = response.get("user", {}).get("id")
-                                st.session_state.authenticated = True
+                                AppState.set_auth(
+                                    user_info=response.get("user"),
+                                    access_token=response.get("accessToken"),
+                                    user_id=response.get("user", {}).get("id")
+                                )
                                 
                                 st.success("✅ Welcome back!")
                                 time.sleep(1)

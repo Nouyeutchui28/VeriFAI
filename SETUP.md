@@ -1,76 +1,116 @@
-# VeriFAI LLM Setup Guide
+# 🚀 VeriFAI LLM Setup & Deployment Guide
 
-## 🚀 Quick Start
+Follow these steps to get your enterprise security analysis platform running in minutes.
 
-### 1️⃣ Install Ollama
+---
 
-1. Download and install Ollama from **https://ollama.com/**
-2. Ensure Ollama is running in your background/system tray.
+## 🛠️ Prerequisites
 
-### 2️⃣ Prepare the Security Model
+Before you begin, ensure you have the following installed:
+*   **Python 3.10 or higher**
+*   **Git**
+*   **pip** (Python package manager)
 
-Open your terminal and run the following commands to pull the base model and create the specialized security engine:
+### 🔑 Required API Keys
+1.  **Hugging Face Token:** Create a free account at [huggingface.co](https://huggingface.co/) and generate a **Read** token at [Settings > Tokens](https://huggingface.co/settings/tokens). This is required to access the **Qwen2.5-Coder-32B** model.
+2.  **GitHub Token (Optional):** Required only if you plan to scan your private repositories. Generate a Classic PAT at [GitHub Settings](https://github.com/settings/tokens).
 
+---
+
+## 📥 Installation
+
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/Nouyeutchui28/VeriFAI.git
+    cd VeriFAI
+    ```
+
+2.  **Create a Virtual Environment:**
+    ```bash
+    python -m venv venv
+    
+    # Windows:
+    venv\Scripts\activate
+    
+    # Linux/macOS:
+    source venv/bin/activate
+    ```
+
+3.  **Install Dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+---
+
+## ⚙️ Configuration
+
+1.  **Environment Variables:**
+    Copy the template and fill in your keys:
+    ```bash
+    cp .env.example .env
+    ```
+    Edit `.env` and add:
+    *   `HF_TOKEN=hf_...`
+    *   `GITHUB_TOKEN=ghp_...` (optional)
+
+2.  **Database Setup:**
+    The system will automatically initialize a local `verifai_llm.db` (SQLite) upon the first run. For cloud persistence, ensure your InsForge project is configured in `.insforge/project.json`.
+
+---
+
+## 🏃 Running the Application
+
+### Method 1: All-in-One (Recommended)
 ```bash
-# Pull the base Phi-3 model
-ollama pull phi3
-
-# Create the custom secure-patch-model (if using provided Modelfile)
-ollama create secure-patch-model -f Modelfile
+streamlit run app.py
 ```
 
-### 3️⃣ Configure Environment
-
-1. Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
-2. Open `.env` and configure your database and secret keys. (No API keys required for the local engine!)
-
-### 4️⃣ Launch the Application
-
+### Method 2: Manual Backend & Frontend (For Developers)
 ```bash
-# Start both Backend and Frontend
-./start_app.sh
-```
-
-Or run them manually:
-```bash
-# Terminal 1: Backend
+# Terminal 1: Start Backend API
 python -m uvicorn src.api.main:app --port 8000
 
-# Terminal 2: Frontend
-streamlit run app.py --server.port 8502
+# Terminal 2: Start Streamlit UI
+streamlit run app.py --server.port 8501
 ```
 
 ---
 
-## ✅ Verify Setup
+## 🐳 Docker Deployment (Optional)
 
-1. Open the app at `http://localhost:8502`
-2. Check the **Model Status** in the sidebar.
-3. You should see **✅ Local AI Active (secure-patch-model)**.
-4. If you see a connection error, ensure Ollama is running and you've run `ollama create secure-patch-model`.
+If you prefer using Docker:
+```bash
+# Build the image
+docker build -t verifai-llm .
+
+# Run the container
+docker run -p 8501:8501 --env-file .env verifai-llm
+```
+
+---
+
+## ✅ Post-Installation Checklist
+
+1.  Open `http://localhost:8501` in your browser.
+2.  **Sign In:** Create a new account or log in.
+3.  **Check Sidebar:** Verify that it says **✅ Qwen2.5-Coder-32B Active**.
+4.  **Test Scan:** Paste the following into the Scanner:
+    ```python
+    import sqlite3
+    db = sqlite3.connect("test.db")
+    user_id = input()
+    db.execute(f"SELECT * FROM users WHERE id = {user_id}") # SQL Injection!
+    ```
+5.  **Verify Results:** Ensure the scanner detects the SQL Injection and suggests a parameterized query fix.
 
 ---
 
 ## 🔧 Troubleshooting
 
-| Error | Solution |
-|-------|----------|
-| **❌ Ollama Connection Error** | Ensure the Ollama app is running on your machine. |
-| **⚠️ Model not found** | Run `ollama list` to check if `secure-patch-model` exists. |
-| **Timeout during analysis** | First run may take longer to load the model into RAM. |
-
----
-
-## 🎯 What Next?
-
-Once the local engine is active:
-1. **Direct Code**: Paste code in the input area
-2. **Upload ZIP**: Drop a `.zip` file with project code
-3. **Click**: Run Security Scan 🔍
-4. **View Results**: Check AI Analysis and Patch Suggestions tabs
-5. **Apply**: Download or apply patches directly
-
-Enjoy your private, local security analysis! 🛡️
+| Issue | Solution |
+| :--- | :--- |
+| **Model Error (401/403)** | Your `HF_TOKEN` is invalid or missing. Update it in `.env`. |
+| **Semgrep Not Found** | Ensure `semgrep` is in your PATH. Try `pip install semgrep`. |
+| **Login Persistence Fails** | Check if the file `.auth_session.json` is writable. |
+| **Dashboard Zeros** | Run at least one scan to populate the dashboard metrics. |
