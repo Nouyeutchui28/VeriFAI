@@ -205,7 +205,7 @@ def _build_semgrep_command(target_path, metrics_enabled=False):
         "--disable-version-check",
         "--output",
         "results/res.json",
-        "--config=auto",
+        "--config=p/owasp-top-ten",
         "--timeout",
         "60", # Reduce per-file timeout for speed
         "--error", 
@@ -649,7 +649,29 @@ def unified_security_scan(semgrep_results, code_snippet, llm=None, file_path="ma
     analysis = result.get("analysis", "")
     fixed_code = result.get("fixed_code", "")
     
+    verification_msg = ""
+    if fixed_code and fixed_code != safe_code:
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as tmp:
+            tmp.write(fixed_code)
+            tmp_path = tmp.name
+        
+        try:
+            verify_results = run_semgrep_scan(tmp_path)
+            num_findings = len(verify_results.get("results", []))
+            if num_findings == 0:
+                verification_msg = "\n\n✅ Verification successful: no vulnerability owaps detected."
+            else:
+                verification_msg = f"\n\n⚠️ Verification note: {num_findings} remaining OWASP vulnerabilities detected in the patched code."
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+    
     patch = _build_unified_diff(safe_code, fixed_code, file_path) if fixed_code else ""
+    if patch and verification_msg:
+        patch += verification_msg
+        
     final_patch = patch or "No patch suggestions."
     
     cache_scan_result(code_hash, semgrep_results, analysis, final_patch)
