@@ -12,7 +12,7 @@ Before you begin, ensure you have the following installed:
 *   **pip** (Python package manager)
 
 ### 🔑 Required API Keys
-1.  **Hugging Face Token:** Create a free account at [huggingface.co](https://huggingface.co/) and generate a **Read** token at [Settings > Tokens](https://huggingface.co/settings/tokens). This is required to access the **Qwen2.5-Coder-32B** model.
+1.  **Groq API Key:** Create a free account at [console.groq.com](https://console.groq.com/) and generate an API key at [API Keys](https://console.groq.com/keys). This is required to access the **qwen-2.5-coder-32b** model.
 2.  **GitHub Token (Optional):** Required only if you plan to scan your private repositories. Generate a Classic PAT at [GitHub Settings](https://github.com/settings/tokens).
 
 ---
@@ -51,7 +51,7 @@ Before you begin, ensure you have the following installed:
     cp .env.example .env
     ```
     Edit `.env` and add:
-    *   `HF_TOKEN=hf_...`
+    *   `GROQ_API_KEY=gsk_...`
     *   `GITHUB_TOKEN=ghp_...` (optional)
 
 2.  **Database Setup:**
@@ -75,7 +75,7 @@ VeriFAI LLM is pre-configured for **Render**.
 5.  Render will automatically detect the `render.yaml` file and set up:
     *   The Streamlit Web Service.
     *   Necessary environment variables.
-6.  Go to the **Environment** settings of your new service and add your `HF_TOKEN`.
+6.  Go to the **Environment** settings of your new service and add your `GROQ_API_KEY`.
 
 ### Method 3: Docker (Custom)
 If you prefer using Docker:
@@ -93,7 +93,7 @@ docker run -p 8501:8501 --env-file .env verifai-llm
 
 1.  Open `http://localhost:8501` (or your Render URL) in your browser.
 2.  **Sign In:** Create a new account or log in.
-3.  **Check Sidebar:** Verify that it says **✅ Qwen2.5-Coder-32B Active**.
+3.  **Check Sidebar:** Verify that it says **✅ qwen-2.5-coder-32b Active**.
 4.  **Test Scan:** Paste a sample vulnerable script and verify detection.
 
 ---
@@ -102,7 +102,7 @@ docker run -p 8501:8501 --env-file .env verifai-llm
 
 | Issue | Solution |
 | :--- | :--- |
-| **Model Error (401/403)** | Your `HF_TOKEN` is invalid or missing. Update it in `.env` or Render settings. |
+| **Model Error (401/403)** | Your `GROQ_API_KEY` is invalid or missing. Update it in `.env` or Render settings. |
 | **Semgrep Not Found** | Ensure `semgrep` is in your PATH. Try `pip install semgrep`. |
 | **Login Persistence Fails** | Check if the file `.auth_session.json` is writable. |
 | **Dashboard Zeros** | Run at least one scan to populate the dashboard metrics. |

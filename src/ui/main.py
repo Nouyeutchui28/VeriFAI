@@ -10,19 +10,19 @@ import atexit
 from datetime import datetime
 
 # Import UI Components & Utilities
-from .scanner_tab import render_scanner_tab
-from .chat_tab import render_chat_tab
-from .rules_tab import render_rules_tab
-from .github_tab import render_github_tab
-from .history_tab import render_history_tab
-from .settings_tab import render_settings_tab
-from .help_tab import render_help_tab
-from .login_page import render_login_page
-from .styles import apply_custom_styles
-from .api_client import get_api_client
-from ..core.file_utils import cleanup_temp_files
-from ..utils.state import AppState
-from ..utils.report_gen import generate_pdf_report
+from src.ui.scanner_tab import render_scanner_tab
+from src.ui.chat_tab import render_chat_tab
+from src.ui.rules_tab import render_rules_tab
+from src.ui.github_tab import render_github_tab
+from src.ui.history_tab import render_history_tab
+from src.ui.settings_tab import render_settings_tab
+from src.ui.help_tab import render_help_tab
+from src.ui.login_page import render_login_page
+from src.ui.styles import apply_custom_styles
+from src.ui.api_client import get_api_client
+from src.core.file_utils import cleanup_temp_files
+from src.utils.state import AppState
+from src.utils.report_gen import generate_pdf_report
 
 NAV_ITEMS = [
     ("Dashboard", "🏠 Dashboard"),
@@ -389,10 +389,10 @@ def render_sidebar_navigation(current_page):
         f"""
         <div class="model-chip">
             <div style="font-weight: 700; color: var(--text); font-size: 0.85rem;">
-                <span class="live-dot"></span> Qwen2.5-Coder-32B
+                <span class="live-dot"></span> qwen-2.5-coder-32b
             </div>
             <div style="color: var(--text3); font-size: 0.75rem; margin-top: 0.25rem;">
-                Engine: Hugging Face AI (Ultra)
+                Engine: Groq AI (Ultra)
             </div>
         </div>
         """,
@@ -416,7 +416,8 @@ def render_top_bar(current_page):
         
         # Pure HTML/JS Menu Toggle
         with cols[0]:
-            st.components.v1.html("""
+            import streamlit.components.v1 as components
+            components.html("""
                 <button onclick="
                     var parentDoc = window.parent.document;
                     var clicked = false;
@@ -506,7 +507,7 @@ def render_dashboard_fragment():
     
     # Attempt to fetch real stats from backend
     try:
-        stats = api_client.get_summary_stats_insforge()
+        stats = api_client.get_summary_stats()
         is_mock = False
         if not stats or stats.get("total_scans", 0) == 0:
             is_mock = True
@@ -556,7 +557,7 @@ def render_dashboard_fragment():
     with v1:
         st.markdown("#### 📈 Analysis Velocity (Last 7 Days)")
         try:
-            history = [] if is_mock else api_client.get_scan_history_insforge(limit=15)
+            history = [] if is_mock else api_client.get_scan_history(limit=15)
             if not history and is_mock:
                 # Generate realistic mock trend
                 dates = pd.date_range(end=datetime.now(), periods=7)
@@ -581,7 +582,7 @@ def render_dashboard_fragment():
     with v2:
         st.markdown("#### 🛡️ Threat Distribution")
         try:
-            severity_data = {} if is_mock else api_client.get_severity_stats_insforge()
+            severity_data = {} if is_mock else api_client.get_severity_stats()
             
             # If backend distribution is empty but we have current scan results, use those
             if not any(severity_data.values()) and current_results:
@@ -618,7 +619,7 @@ def render_dashboard_fragment():
         st.markdown(f"""
             <div class="model-chip" style="margin-top:0;">
                 <div class="chip-title"><span class="status-dot ready"></span> AI Engine</div>
-                <div class="chip-subtitle">Local Qwen2.5-Coder-32B (Hugging Face)</div>
+                <div class="chip-subtitle">Groq Engine (qwen-2.5-coder-32b)</div>
             </div>
         """, unsafe_allow_html=True)
     with s3:
@@ -683,8 +684,8 @@ def main():
         # Check if we have results to show
         results = st.session_state.get("analysis_results")
         if results and results.get("patch_suggestions"):
-            from .patch_review import render_patch_review_panel, extract_patched_code
-            from .scanner_tab import _resolve_patch_target
+            from src.ui.patch_review import render_patch_review_panel, extract_patched_code
+            from src.ui.scanner_tab import _resolve_patch_target
             
             patch_text = results.get("patch_suggestions", "")
             code_content = results.get("code_content", "")

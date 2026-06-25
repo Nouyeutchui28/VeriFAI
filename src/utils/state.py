@@ -23,7 +23,7 @@ class AppState:
         "otp_verification_email": None,
         "github_repo_path": None,
         "github_repo_url": None,
-        "model_selection": "Qwen2.5-Coder-32B-Instruct",
+        "model_selection": "qwen-2.5-coder-32b",
         "llm_temperature": 0.2,
         "theme": "dark",
         "notifications_enabled": True,
@@ -41,19 +41,19 @@ class AppState:
             if key not in st.session_state:
                 st.session_state[key] = default_value
                 
-        # Persist login across refreshes
-        session_file = ".auth_session.json"
-        if os.path.exists(session_file) and not st.session_state.authenticated:
-            try:
-                with open(session_file, "r") as f:
-                    data = json.load(f)
-                    st.session_state.authenticated = data.get("authenticated", False)
-                    st.session_state.user_info = data.get("user_info")
-                    st.session_state.access_token = data.get("access_token")
-                    st.session_state.user_id = data.get("user_id")
-                    st.session_state.legal_agreed = data.get("legal_agreed", False)
-            except Exception:
-                pass
+        # Persist login across refreshes - DISABLED to force login page on start
+        # session_file = ".auth_session.json"
+        # if os.path.exists(session_file) and not st.session_state.authenticated:
+        #     try:
+        #         with open(session_file, "r") as f:
+        #             data = json.load(f)
+        #             st.session_state.authenticated = data.get("authenticated", False)
+        #             st.session_state.user_info = data.get("user_info")
+        #             st.session_state.access_token = data.get("access_token")
+        #             st.session_state.user_id = data.get("user_id")
+        #             st.session_state.legal_agreed = data.get("legal_agreed", False)
+        #     except Exception:
+        #         pass
 
     @staticmethod
     def logout() -> None:

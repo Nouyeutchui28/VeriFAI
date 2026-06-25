@@ -29,9 +29,9 @@ def render_settings_tab():
         col1, col2 = st.columns(2)
 
         with col1:
-            render_settings_group("Model Selection", "🤖", "Hugging Face Inference API Active")
+            render_settings_group("Model Selection", "🤖", "Groq API Active")
             model_options = [
-                "Qwen/Qwen2.5-Coder-32B-Instruct"
+                "qwen-2.5-coder-32b"
             ]
             selected_model = st.selectbox(
                 "Intelligence Model",
@@ -40,7 +40,7 @@ def render_settings_tab():
                 key="settings_model_select",
                 label_visibility="collapsed"
             )
-            st.info("🚀 Hugging Face API Complete: Using Qwen2.5-Coder-32B-Instruct.")
+            st.info("🚀 Groq API Complete: Using qwen-2.5-coder-32b.")
 
         with col2:
             render_settings_group("Response Variation", "🎲", "Creativity vs Consistency")
@@ -350,20 +350,20 @@ def render_settings_tab():
 
         render_settings_group("API Credentials", "🔑")
 
-        # Hugging Face Token
-        st.markdown("**Hugging Face API Token**")
-        hf_token = st.text_input(
-            "Hugging Face Token (HF_TOKEN)",
+        # Groq API Key
+        st.markdown("**Groq API Key**")
+        groq_api_key = st.text_input(
+            "Groq API Key (GROQ_API_KEY)",
             type="password",
-            value=os.getenv("HF_TOKEN", ""),
-            placeholder="hf_...",
-            help="Required for Qwen2.5-Coder intelligence. Get one at huggingface.co/settings/tokens"
+            value=os.getenv("GROQ_API_KEY", ""),
+            placeholder="gsk_...",
+            help="Required for qwen-2.5-coder-32b intelligence. Get one at console.groq.com/keys"
         )
-        if hf_token and hf_token != os.getenv("HF_TOKEN"):
+        if groq_api_key and groq_api_key != os.getenv("GROQ_API_KEY"):
             # Optionally update .env or just use in session
             # For simplicity in this demo, we'll suggest saving it
-            st.info("💡 Don't forget to save settings to apply your new token.")
-            os.environ["HF_TOKEN"] = hf_token
+            st.info("💡 Don't forget to save settings to apply your new key.")
+            os.environ["GROQ_API_KEY"] = groq_api_key
 
         st.divider()
 
@@ -380,10 +380,10 @@ def render_settings_tab():
 
         st.divider()
 
-        # Hugging Face Status
-        st.markdown("**Hugging Face Intelligence Engine**")
-        st.success("✅ System Context: Qwen2.5-Coder-32B-Instruct Active")
-        st.caption("The pipeline is now running using Hugging Face Serverless Inference API.")
+        # Groq Status
+        st.markdown("**Groq Intelligence Engine**")
+        st.success("✅ System Context: qwen-2.5-coder-32b Active")
+        st.caption("The pipeline is now running using Groq API.")
 
         st.divider()
 

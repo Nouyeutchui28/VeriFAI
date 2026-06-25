@@ -158,8 +158,8 @@ def render_patch_review_panel(
                 # Setup target for directory/file scan
                 if os.path.isdir(target_path):
                     # For directories, we use the path
-                    st.session_state.scanner_zip_file = None # Clear ZIP
-                    st.session_state.scanner_uploaded_file = None
+                    st.session_state.pop("scanner_zip_file", None) # Clear ZIP
+                    st.session_state.pop("scanner_uploaded_file", None)
                     # We might need a special state to tell scanner to use this path
                     # but for now, let's try to set it as a "cloned" repo path
                     st.session_state.scanner_github_repo_path = target_path

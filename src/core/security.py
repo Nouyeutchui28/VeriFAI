@@ -192,11 +192,11 @@ SEMGREP_EXCLUDES = [
 
 def _build_semgrep_command(target_path, metrics_enabled=False):
     """Build a bounded Semgrep command for files or repositories."""
-    import sys
+    import shutil
 
-    semgrep_binary = os.path.join(os.path.dirname(sys.executable), "semgrep")
-    if not os.path.exists(semgrep_binary):
-        semgrep_binary = "semgrep"
+    semgrep_binary = shutil.which("semgrep")
+    if not semgrep_binary:
+        raise FileNotFoundError("Semgrep is not installed or not found in PATH. Please run `pip install semgrep`.")
 
     command = [
         semgrep_binary,
@@ -309,8 +309,13 @@ def run_semgrep_scan(target_path, metrics_enabled=False):
             except json.JSONDecodeError:
                 pass
 
+    except FileNotFoundError as e:
+        error_msg = str(e)
+        print(f"[Semgrep] Error: {error_msg}")
+        return {"results": [], "error": error_msg}
     except Exception as e:
         print(f"Semgrep execution error: {e}")
+        return {"results": [], "error": str(e)}
 
     return {"results": [], "error": "Semgrep scan did not produce JSON output"}
 
@@ -571,7 +576,7 @@ def _build_unified_diff(original_text, patched_text, patch_path):
 
 def security_chat(code_snippet, llm_analysis, chat_history, query, llm=None):
     """
-    Expert security chat assistant powered by Qwen2.5.
+    Expert security chat assistant powered by Groq.
     """
     from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
     

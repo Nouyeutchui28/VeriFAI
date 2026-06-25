@@ -1,41 +1,50 @@
 import os
 import json
 import logging
-from huggingface_hub import InferenceClient
+from openai import OpenAI, RateLimitError, AuthenticationError, APIConnectionError
 
 logger = logging.getLogger(__name__)
 
-HF_MODEL_ID = "Qwen/Qwen2.5-Coder-32B-Instruct"
+def get_groq_model():
+    return os.getenv("GROQ_MODEL", "qwen-2.5-coder-32b")
 
 def get_ai_response(prompt: str, system_message: str = "", temperature: float = 0.2, max_tokens: int = 2048):
     """
-    Directly call Hugging Face Inference API using the InferenceClient.
+    Directly call Groq API using the Groq SDK.
     """
-    hf_token = os.getenv("HF_TOKEN")
-    if not hf_token:
-        raise ValueError("HF_TOKEN is missing. Please add it to your .env file.")
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    if not groq_api_key:
+        raise ValueError("API_KEY is missing. Please add it to your .env file.")
 
     try:
-        client = InferenceClient(api_key=hf_token)
+        client = OpenAI(api_key=groq_api_key, base_url="https://openrouter.ai/api/v1")
         
         messages = []
         if system_message:
             messages.append({"role": "system", "content": system_message})
         messages.append({"role": "user", "content": prompt})
 
-        response = ""
-        # Serverless API check for ChatCompletion
-        comp = client.chat_completion(
-            model=HF_MODEL_ID,
+        comp = client.chat.completions.create(
+            model=get_groq_model(),
             messages=messages,
             max_tokens=max_tokens,
             temperature=max(0.01, temperature),
-            stream=False
+            stream=False,
+            response_format={"type": "json_object"} if "OUTPUT ONLY VALID JSON" in system_message else None
         )
         response = comp.choices[0].message.content
         return response
+    except AuthenticationError as e:
+        logger.error(f"API Authentication Error: {e}")
+        raise ValueError(f"Invalid API Key. Please check your credentials.")
+    except RateLimitError as e:
+        logger.error(f"API Rate Limit Error: {e}")
+        raise ValueError(f"API rate limit exceeded. Please try again later.")
+    except APIConnectionError as e:
+        logger.error(f"API Connection Error: {e}")
+        raise ValueError(f"Failed to connect to API. Please check your network.")
     except Exception as e:
-        logger.error(f"Hugging Face API Error: {e}")
+        logger.error(f"API Error: {e}")
         raise e
 
 def _parse_json_from_response(response: str) -> dict:
@@ -71,9 +80,9 @@ def _parse_json_from_response(response: str) -> dict:
              return {"error": "Invalid JSON response from AI", "raw": response}
 
 def generate_vulnerability_analysis(semgrep_results: dict, code_snippet: str, temperature: float = 0.2) -> dict:
-    """Generate vulnerability analysis using Qwen2.5."""
+    """Generate vulnerability analysis using Groq."""
     system_msg = """You are an expert security analyst. Provide analysis based on Semgrep findings and your expert review.
-    OUTPUT ONLY VALID JSON:
+    OUTPUT ONLY VALID JSON matching this exact structure:
     {
       "vulnerabilities": [
         {
@@ -93,7 +102,7 @@ def generate_vulnerability_analysis(semgrep_results: dict, code_snippet: str, te
         response = get_ai_response(prompt, system_msg, temperature)
         return _parse_json_from_response(response)
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"API unavailable. Unable to generate analysis. Details: {e}"}
 
 def generate_remediation_patch(semgrep_results: dict, code_snippet: str, file_path: str = "main.py", temperature: float = 0.0) -> dict:
     """Generate a secure, vulnerability-free code patch."""
@@ -106,7 +115,7 @@ def generate_remediation_patch(semgrep_results: dict, code_snippet: str, file_pa
     4. Cryptography: Use only modern, secure algorithms (e.g., Argon2, AES-GCM). Replace MD5/SHA1.
     5. Completeness: Return the ENTIRE functional code block so it can replace the original.
     
-    OUTPUT ONLY VALID JSON:
+    OUTPUT ONLY VALID JSON matching this exact structure:
     {
       "file_path": "...",
       "patched_code": "The complete, SECURED code."
@@ -119,7 +128,7 @@ def generate_remediation_patch(semgrep_results: dict, code_snippet: str, file_pa
         response = get_ai_response(prompt, system_msg, temperature)
         return _parse_json_from_response(response)
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"API unavailable. Unable to generate AI patch at this time. Details: {e}"}
 
 def unified_scan_and_patch(semgrep_results: dict, code_snippet: str, file_path: str = "main.py", context_files: dict = None, temperature: float = 0.2) -> dict:
     """Perform analysis and patch generation in a single pass."""
@@ -136,7 +145,7 @@ def unified_scan_and_patch(semgrep_results: dict, code_snippet: str, file_path: 
     - Use secure-by-default libraries (e.g., sqlalchemy for DB, argon2 for hashing).
     - Ensure the 'fixed_code' is functional, complete, and VULNERABILITY-FREE.
     
-    OUTPUT ONLY VALID JSON:
+    OUTPUT ONLY VALID JSON matching this exact structure:
     {{
       "analysis": "A detailed security report.",
       "fixed_code": "The complete, SECURED code block."
@@ -149,21 +158,24 @@ def unified_scan_and_patch(semgrep_results: dict, code_snippet: str, file_path: 
         response = get_ai_response(prompt, system_msg, temperature)
         return _parse_json_from_response(response)
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"API unavailable. Unable to generate unified scan and patch. Details: {e}"}
 
 def generate_chat_response(messages: list, temperature: float = 0.2) -> dict:
-    """Handle chat responses using the Qwen model."""
+    """Handle chat responses using the Groq model."""
     try:
-        hf_token = os.getenv("HF_TOKEN")
-        client = InferenceClient(api_key=hf_token)
+        groq_api_key = os.getenv("GROQ_API_KEY")
+        if not groq_api_key:
+            return {"error": "API Key is missing. Please add it to your .env file."}
+            
+        client = OpenAI(api_key=groq_api_key, base_url="https://openrouter.ai/api/v1")
         
         formatted_messages = []
         for msg in messages:
             role = "user" if msg.type == "human" else "assistant"
             formatted_messages.append({"role": role, "content": msg.content})
 
-        comp = client.chat_completion(
-            model=HF_MODEL_ID,
+        comp = client.chat.completions.create(
+            model=get_groq_model(),
             messages=formatted_messages,
             temperature=max(0.01, temperature),
             max_tokens=2048,
@@ -171,13 +183,19 @@ def generate_chat_response(messages: list, temperature: float = 0.2) -> dict:
         )
         response = comp.choices[0].message.content
         return {"response": response}
+    except AuthenticationError as e:
+        return {"error": f"Invalid API Key. Please check your credentials."}
+    except RateLimitError as e:
+        return {"error": f"API rate limit exceeded. Please try again later."}
+    except APIConnectionError as e:
+        return {"error": f"Failed to connect to API. Please check your network."}
     except Exception as e:
         return {"error": str(e)}
 
 def generate_semgrep_rules(code_snippet: str, llm_analysis: str, temperature: float = 0.2) -> dict:
     """Generate custom Semgrep rules."""
     system_msg = """You are a Semgrep rule expert. Create custom YAML rules for detected vulnerabilities.
-    OUTPUT ONLY VALID JSON:
+    OUTPUT ONLY VALID JSON matching this exact structure:
     {
       "rules": "the raw YAML string"
     }"""
@@ -188,4 +206,4 @@ def generate_semgrep_rules(code_snippet: str, llm_analysis: str, temperature: fl
         response = get_ai_response(prompt, system_msg, temperature)
         return _parse_json_from_response(response)
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"API unavailable. Unable to generate Semgrep rules. Details: {e}"}

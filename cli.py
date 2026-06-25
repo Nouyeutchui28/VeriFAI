@@ -17,9 +17,15 @@ def run_semgrep(target_path):
     """Run Semgrep via CLI."""
     print(f"[*] Running Semgrep static analysis on {target_path}...")
     
-    # Try to find semgrep in the virtual environment first
-    venv_semgrep = os.path.join(os.path.dirname(__file__), "venv", "bin", "semgrep")
-    semgrep_cmd = venv_semgrep if os.path.exists(venv_semgrep) else "semgrep"
+    import shutil
+    semgrep_cmd = shutil.which("semgrep")
+    if not semgrep_cmd:
+        error_msg = "Semgrep is not installed or not found in PATH. Please run `pip install semgrep`."
+        print(f"[!] {error_msg}")
+        # Log the issue and return error
+        import logging
+        logging.getLogger(__name__).error(error_msg)
+        return {"results": [], "error": error_msg}
     
     output_path = "results/cli_result.json"
     os.makedirs("results", exist_ok=True)
@@ -36,12 +42,21 @@ def run_semgrep(target_path):
     ]
     
     try:
-        subprocess.run(cmd, capture_output=True, text=True, check=False)
+        print(f"[*] Executing semgrep command: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        print(f"[*] Semgrep execution completed with exit code {result.returncode}")
+        if result.returncode != 0 and result.stderr:
+            print(f"[!] Semgrep stderr: {result.stderr}")
+            
         if os.path.exists(output_path):
             with open(output_path, 'r') as f:
                 return json.load(f)
     except Exception as e:
-        print(f"[!] Semgrep execution failed: {e}")
+        error_msg = f"Semgrep execution failed: {e}"
+        print(f"[!] {error_msg}")
+        import logging
+        logging.getLogger(__name__).error(error_msg)
+        return {"results": [], "error": error_msg}
     
     return {"results": []}
 
@@ -99,7 +114,7 @@ def main():
         code_content = f"Target is a directory: {target_path}. See Semgrep results."
 
     # 2. AI Analysis
-    print("[*] Initializing AI Deep Reasoning (Qwen2.5-Coder-32B-Instruct)...")
+    print(f"[*] Initializing AI Deep Reasoning (Groq model)...")
 
 
     print("[*] Performing Deep-Trace Analysis...")

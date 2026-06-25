@@ -12,10 +12,8 @@ import os
 from ..core.retry_utils import retry_callable, CircuitBreaker
 
 # Allow overriding backend URLs via environment variables or Streamlit secrets
-API_BASE_URL = os.environ.get("VERIFAI_API_BASE_URL") or "http://localhost:8001/api"
-WS_BASE_URL = os.environ.get("VERIFAI_WS_BASE_URL") or "ws://localhost:8001"
-INSFORGE_AUTH_URL = "https://inkgfmi3.us-east.insforge.app/api/auth"
-INSFORGE_REST_URL = "https://inkgfmi3.us-east.insforge.app/rest/v1"
+API_BASE_URL = os.environ.get("API_BASE_URL") or "http://localhost:8000/api"
+WS_BASE_URL = os.environ.get("VERIFAI_WS_BASE_URL") or "ws://localhost:8000"
 
 class VeriFAILLMAPIClient:
     """Client for VeriFAI LLM backend API."""
@@ -23,13 +21,8 @@ class VeriFAILLMAPIClient:
     def __init__(self):
         self.base_url = st.secrets.get("api_base_url", API_BASE_URL) if isinstance(st, type) else API_BASE_URL
         self.ws_url = st.secrets.get("ws_base_url", WS_BASE_URL) if isinstance(st, type) else WS_BASE_URL
-        self.auth_url = INSFORGE_AUTH_URL
-        self.rest_url = INSFORGE_REST_URL
         self.token = st.session_state.get("access_token")
         
-        # Load InsForge project config
-        self.project_config = self._load_project_config()
-        self.api_key = self.project_config.get("api_key")
         self._cb = CircuitBreaker(fail_threshold=5, reset_timeout=30)
         self._session = requests.Session()
 
@@ -42,27 +35,53 @@ class VeriFAILLMAPIClient:
 
         return retry_callable(_call, retries=2, backoff_factor=0.5, exceptions=(Exception,), circuit=self._cb)
 
-    def _load_project_config(self) -> Dict:
-        """Load InsForge project configuration."""
-        import json
-        import os
-        config_path = os.path.join(os.getcwd(), ".insforge", "project.json")
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                return json.load(f)
-        return {}
-
     def get_headers(self):
-        """Get request headers with auth token and API key."""
+        """Get request headers with auth token."""
         headers = {
-            "Content-Type": "application/json",
-            "apikey": self.api_key
+            "Content-Type": "application/json"
         }
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
 
     # Authentication methods
+    def signin(self, email: str, password: str) -> Dict:
+        """Simulate signin using local backend OAuth login."""
+        name = email.split('@')[0].capitalize()
+        # Mock OAuth payload using the email
+        return self.login(
+            oauth_provider="local",
+            oauth_id=email,
+            email=email,
+            name=name,
+            oauth_token="mock_token_123"
+        )
+        
+    def signup(self, email: str, password: str, name: str = None) -> Dict:
+        """Simulate signup using local backend OAuth login."""
+        if not name:
+            name = email.split('@')[0].capitalize()
+        return self.login(
+            oauth_provider="local",
+            oauth_id=email,
+            email=email,
+            name=name,
+            oauth_token="mock_token_123"
+        )
+
+    def verify_token_insforge(self, email: str, otp: str) -> Dict:
+        """Mock OTP verification."""
+        name = email.split('@')[0].capitalize()
+        return self.login("local", email, email, name, "mock_token_123")
+
+    def recover_password(self, email: str) -> Dict:
+        """Mock password recovery."""
+        return {"message": "Success"}
+
+    def reset_password(self, email: str, otp: str, new_password: str) -> Dict:
+        """Mock password reset."""
+        return {"message": "Success"}
+
     def login(self, oauth_provider: str, oauth_id: str, email: str, name: str, oauth_token: str, picture_url: str = None) -> Dict:
         """Login with OAuth."""
         try:
@@ -74,7 +93,14 @@ class VeriFAILLMAPIClient:
                     "oauth_token": oauth_token,
                     "picture_url": picture_url
                 })
-            return resp.json()
+            # Map FastAPI TokenResponse to the structure the frontend expects
+            data = resp.json()
+            if "access_token" in data:
+                return {
+                    "accessToken": data["access_token"],
+                    "user": data["user"]
+                }
+            return data
         except Exception as e:
             logger.error(f"Login error: {str(e)}")
             return {"error": str(e)}
@@ -113,7 +139,6 @@ class VeriFAILLMAPIClient:
             resp = self._request_with_retry("GET", f"{self.base_url}/scans/history?limit={limit}", headers=self.get_headers())
             return resp.json()
         except Exception as e:
-            # Handle connection errors gracefully with a helpful message
             logger.error(f"Get history error: {str(e)}")
             err_msg = str(e)
             if "Connection refused" in err_msg or "Failed to establish a new connection" in err_msg:
@@ -200,298 +225,31 @@ class VeriFAILLMAPIClient:
         except Exception as e:
             logger.error(f"WebSocket error: {str(e)}")
 
-    # InsForge Auth methods
-    def signin(self, email: str, password: str) -> Dict:
-        """Sign in with email and password via InsForge."""
+    def get_summary_stats(self) -> Dict:
+        """Fetch summary statistics for the dashboard using local DB."""
         try:
-            response = requests.post(
-                f"{self.auth_url}/sessions?client_type=server",
-                json={"email": email, "password": password},
-                headers={"apikey": self.api_key, "Content-Type": "application/json"},
-                timeout=15
-            )
-            if not response.ok:
-                try:
-                    return response.json()
-                except:
-                    return {"error": response.text}
-            return response.json()
-        except Exception as e:
-            logger.error(f"Signin error: {str(e)}")
-            return {"error": str(e)}
-
-    def signup(self, email: str, password: str, name: str = None) -> Dict:
-        """Sign up with email and password via InsForge."""
-        try:
-            # Only include non-None values
-            data = {"email": email, "password": password}
-            if name:
-                data["name"] = name
-                
-            response = requests.post(
-                f"{self.auth_url}/users?client_type=server",
-                json=data,
-                headers={"apikey": self.api_key, "Content-Type": "application/json"},
-                timeout=15
-            )
-            if not response.ok:
-                try:
-                    return response.json()
-                except:
-                    return {"error": response.text}
-            return response.json()
-        except Exception as e:
-            logger.error(f"Signup error: {str(e)}")
-            return {"error": str(e)}
-
-    def verify_token_insforge(self, email: str, otp: str) -> Dict:
-        """Verify email with InsForge using OTP code."""
-        try:
-            response = requests.post(
-                f"{self.auth_url}/email/verify?client_type=server",
-                json={"email": email, "otp": otp},
-                headers={"apikey": self.api_key, "Content-Type": "application/json"},
-                timeout=15
-            )
-            if not response.ok:
-                try:
-                    return response.json()
-                except:
-                    return {"error": response.text}
-            return response.json()
-        except Exception as e:
-            logger.error(f"Verify token error: {str(e)}")
-            return {"error": str(e)}
-
-    def recover_password(self, email: str) -> Dict:
-        """Request password recovery via InsForge."""
-        try:
-            response = requests.post(
-                f"{self.auth_url}/recover?client_type=server",
-                json={"email": email},
-                headers={"apikey": self.api_key, "Content-Type": "application/json"},
-                timeout=15
-            )
-            if not response.ok:
-                try:
-                    return response.json()
-                except:
-                    return {"error": response.text}
-            return response.json()
-        except Exception as e:
-            logger.error(f"Recover password error: {str(e)}")
-            return {"error": str(e)}
-
-    def reset_password(self, email: str, otp: str, new_password: str) -> Dict:
-        """Verify OTP and reset password via InsForge."""
-        try:
-            response = requests.post(
-                f"{self.auth_url}/recover/verify?client_type=server",
-                json={"email": email, "otp": otp, "password": new_password},
-                headers={"apikey": self.api_key, "Content-Type": "application/json"},
-                timeout=15
-            )
-            if not response.ok:
-                try:
-                    return response.json()
-                except:
-                    return {"error": response.text}
-            return response.json()
-        except Exception as e:
-            logger.error(f"Reset password error: {str(e)}")
-            return {"error": str(e)}
-
-    # InsForge Database methods
-    def save_scan_insforge(self, data: Dict) -> Dict:
-        """Save a scan record to InsForge Database."""
-        try:
-            response = requests.post(
-                f"{self.rest_url}/scans",
-                json=data,
-                headers={
-                    "apikey": self.api_key,
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json",
-                    "Prefer": "return=representation"
-                },
-                timeout=15
-            )
-            if not response.ok:
-                return {"error": response.text}
-            return response.json()
-        except Exception as e:
-            logger.error(f"DB Save Scan error: {str(e)}")
-            return {"error": str(e)}
-
-    def save_result_insforge(self, data: Dict) -> Dict:
-        """Save analysis results to InsForge Database."""
-        try:
-            response = requests.post(
-                f"{self.rest_url}/results",
-                json=data,
-                headers={
-                    "apikey": self.api_key,
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json",
-                    "Prefer": "return=representation"
-                },
-                timeout=15
-            )
-            if not response.ok:
-                return {"error": response.text}
-            return response.json()
-        except Exception as e:
-            logger.error(f"DB Save Result error: {str(e)}")
-            return {"error": str(e)}
-
-    def update_result_fixed_code_insforge(self, result_id: str, fixed_code: str) -> Dict:
-        """Update an existing result with the autofixed code."""
-        try:
-            response = requests.patch(
-                f"{self.rest_url}/results?id=eq.{result_id}",
-                json={"fixed_code": fixed_code[:10000]}, # Store up to 10k chars
-                headers={
-                    "apikey": self.api_key,
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json",
-                    "Prefer": "return=representation"
-                },
-                timeout=15
-            )
-            if not response.ok:
-                return {"error": response.text}
-            return response.json()
-        except Exception as e:
-            logger.error(f"DB Update Result error: {str(e)}")
-            return {"error": str(e)}
-
-    def get_results_insforge(self, scan_id: str) -> Dict:
-        """Fetch analysis results from InsForge Database."""
-        try:
-            response = requests.get(
-                f"{self.rest_url}/results?scan_id=eq.{scan_id}",
-                headers={
-                    "apikey": self.api_key,
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=15
-            )
-            if not response.ok:
-                return {"error": response.text}
-            results = response.json()
-            return results[0] if isinstance(results, list) and results else {"error": "No results found for this scan."}
-        except Exception as e:
-            logger.error(f"DB Get Result error: {str(e)}")
-            return {"error": str(e)}
-
-    # Admin Management methods
-    def get_all_users_insforge(self) -> Dict:
-        """Fetch all users from InsForge (Admin)."""
-        try:
-            response = requests.get(
-                f"{self.auth_url}/users",
-                headers={
-                    "apikey": self.api_key,
-                    "Authorization": f"Bearer {self.api_key}", # Using API key as admin token
-                    "Content-Type": "application/json"
-                }
-            )
-            if not response.ok:
-                return {"error": response.text}
-            return response.json()
-        except Exception as e:
-            logger.error(f"Get all users error: {str(e)}")
-            return {"error": str(e)}
-
-    def get_all_scans_insforge(self) -> Dict:
-        """Fetch all scans from InsForge Database (Admin)."""
-        try:
-            response = requests.get(
-                f"{self.rest_url}/scans",
-                headers={
-                    "apikey": self.api_key,
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json"
-                },
-                timeout=15
-            )
-            if not response.ok:
-                return {"error": response.text}
-            return response.json()
-        except Exception as e:
-            logger.error(f"Get all scans error: {str(e)}")
-            return {"error": str(e)}
-
-    def get_scan_history_insforge(self, limit: int = 15) -> List[Dict]:
-        """Fetch scan history directly from InsForge for real-time dashboard updates."""
-        try:
-            user_id = st.session_state.get("user_id") or (st.session_state.user_info.get("id") if st.session_state.get("user_info") else None)
-            if not user_id:
-                return []
-
-            response = requests.get(
-                f"{self.rest_url}/scans?user_id=eq.{user_id}&order=start_time.desc&limit={limit}",
-                headers={
-                    "apikey": self.api_key,
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=15
-            )
-            return response.json() if response.ok else []
-        except Exception as e:
-            logger.error(f"Get scan history InsForge error: {str(e)}")
-            return []
-
-    def get_summary_stats_insforge(self) -> Dict:
-        """Fetch summary statistics for the dashboard using real data."""
-        try:
-            user_id = st.session_state.get("user_id") or (st.session_state.user_info.get("id") if st.session_state.get("user_info") else None)
-            if not user_id:
+            # We fetch all scans and iterate to build summary stats natively.
+            scans = self.get_scan_history(limit=100)
+            if isinstance(scans, dict) and "error" in scans:
                 return {"total_scans": 0, "vulnerabilities": 0, "fixed_issues": 0, "security_score": 100}
 
-            # Fetch user's scans
-            response = requests.get(
-                f"{self.rest_url}/scans?user_id=eq.{user_id}",
-                headers={
-                    "apikey": self.api_key,
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=15
-            )
-            scans = response.json() if response.ok else []
-            
-            # Fetch user's results by joining with scans
-            # InsForge (PostgREST) supports resource embedding (joins)
-            response = requests.get(
-                f"{self.rest_url}/results?scans.user_id=eq.{user_id}&select=*,scans!inner(user_id)",
-                headers={
-                    "apikey": self.api_key,
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=15
-            )
-            results = response.json() if response.ok else []
-            
             total_scans = len(scans)
             total_vulns = 0
             total_fixed = 0
-            
-            for res in results:
+
+            for scan in scans:
+                res = self.get_results(scan.get("id"))
+                if not isinstance(res, dict) or "error" in res:
+                    continue
+                
                 sc = res.get("severity_count", {})
                 if isinstance(sc, dict):
                     total_vulns += sum(sc.values())
-                if res.get("fixed_code"):
+                if res.get("patches"):
                     total_fixed += 1
-            
-            # Calculate a basic security score
+
             score = 100
             if total_scans > 0:
-                # Deduct points for vulnerabilities, weighted by severity if possible
-                # Simple version: score = max(0, 100 - (total_vulns * 2) + (total_fixed * 3))
                 score = max(0, min(100, 100 - (total_vulns - total_fixed)))
 
             return {
@@ -504,26 +262,19 @@ class VeriFAILLMAPIClient:
             logger.error(f"Get stats error: {str(e)}")
             return {"total_scans": 0, "vulnerabilities": 0, "fixed_issues": 0, "security_score": 100}
 
-    def get_severity_stats_insforge(self) -> Dict:
-        """Fetch severity distribution for charts."""
+    def get_severity_stats(self) -> Dict:
+        """Fetch severity distribution for charts using local DB."""
         try:
-            user_id = st.session_state.get("user_id") or (st.session_state.user_info.get("id") if st.session_state.get("user_info") else None)
-            if not user_id:
+            scans = self.get_scan_history(limit=100)
+            if isinstance(scans, dict) and "error" in scans:
                 return {"Critical": 0, "High": 0, "Medium": 0, "Low": 0}
 
-            response = requests.get(
-                f"{self.rest_url}/results?scans.user_id=eq.{user_id}&select=*,scans!inner(user_id)",
-                headers={
-                    "apikey": self.api_key,
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=15
-            )
-            results = response.json() if response.ok else []
-            
             stats = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-            for res in results:
+            for scan in scans:
+                res = self.get_results(scan.get("id"))
+                if not isinstance(res, dict) or "error" in res:
+                    continue
+                
                 sc = res.get("severity_count", {})
                 if isinstance(sc, dict):
                     for sev, count in sc.items():

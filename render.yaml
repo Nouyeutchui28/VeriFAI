@@ -5,8 +5,10 @@ services:
     plan: free
     region: oregon
     envVars:
-      - key: HF_TOKEN
+      - key: GROQ_API_KEY
         sync: false
+      - key: GROQ_MODEL
+        value: "qwen-2.5-coder-32b"
       - key: GITHUB_TOKEN
         sync: false
       - key: DATABASE_URL

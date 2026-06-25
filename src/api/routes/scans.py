@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import List
@@ -6,6 +7,8 @@ from src.db.connection import get_db
 from src.models import User, Scan
 from src.api.auth import get_current_user
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -43,6 +46,7 @@ async def submit_scan(
     db: Session = Depends(get_db)
 ):
     """Submit a new scan."""
+    logger.info(f"User {user.id} submitting scan for project {scan_data.project_name}")
 
     scan = Scan(
         user_id=user.id,

@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from src.db.connection import get_db
@@ -5,6 +6,8 @@ from src.models import User, Scan, Result
 from src.api.auth import get_current_user
 from sqlalchemy.orm import Session
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -37,6 +40,7 @@ async def save_result(
     db: Session = Depends(get_db)
 ):
     """Save analysis results."""
+    logger.info(f"User {user.id} saving results for scan {scan_id}")
 
     # Verify scan belongs to user
     scan = db.query(Scan).filter(

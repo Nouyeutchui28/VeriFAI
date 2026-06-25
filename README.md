@@ -3,11 +3,11 @@
   
   <h1>🛡️ VeriFAI LLM</h1>
   <p align="center">
-    <strong>Enterprise-Grade Security Analysis powered by Qwen2.5-Coder-32B & Semgrep</strong>
+    <strong>Enterprise-Grade Security Analysis powered by qwen-2.5-coder-32b & Semgrep</strong>
   </p>
 
   <p align="center">
-    <img src="https://img.shields.io/badge/Model-Qwen2.5--Coder--32B-blueviolet?style=for-the-badge" alt="Model">
+    <img src="https://img.shields.io/badge/Model-qwen--2.5--coder--32b-blueviolet?style=for-the-badge" alt="Model">
     <img src="https://img.shields.io/badge/Analysis-Semgrep-2962FF?style=for-the-badge" alt="Semgrep">
     <img src="https://img.shields.io/badge/Interface-Streamlit-FF4B4B?style=for-the-badge" alt="Streamlit">
     <img src="https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge" alt="FastAPI">
@@ -16,14 +16,14 @@
 
 <hr style="height: 2px; background: linear-gradient(to right, #1a237e, #0d47a1);">
 
-VeriFAI LLM is an advanced security analysis platform that fuses the surgical precision of **Semgrep's** static analysis with the deep reasoning capabilities of the **Qwen2.5-Coder-32B** model. Designed for developers and security researchers, it provides a comprehensive suite for detecting, analyzing, and auto-remediating vulnerabilities in modern codebases.
+VeriFAI LLM is an advanced security analysis platform that fuses the surgical precision of **Semgrep's** static analysis with the deep reasoning capabilities of the **qwen-2.5-coder-32b** model. Designed for developers and security researchers, it provides a comprehensive suite for detecting, analyzing, and auto-remediating vulnerabilities in modern codebases.
 
 ---
 
 ## ✨ Key Features
 
 ### 🧠 Ultra-Intelligence Engine
-Powered by **Qwen2.5-Coder-32B-Instruct**, VeriFAI provides deep-trace security analysis that understands complex logic, data flow, and architectural vulnerabilities that traditional tools miss.
+Powered by **qwen-2.5-coder-32b**, VeriFAI provides deep-trace security analysis that understands complex logic, data flow, and architectural vulnerabilities that traditional tools miss.
 
 ### 📊 Security Command Center (Dashboard)
 Real-time oversight of your security posture.
@@ -46,7 +46,7 @@ VeriFAI can clone GitHub repositories or process ZIP archives, tracing dependenc
 
 ### 1. Prerequisites
 *   Python 3.10+
-*   [Hugging Face API Token](https://huggingface.co/settings/tokens) (Required for the 32B Intelligence Engine)
+*   [Groq API Key](https://console.groq.com/keys) (Required for the Intelligence Engine)
 
 ### 2. Installation
 ```bash
@@ -63,7 +63,7 @@ Create a `.env` file from the example:
 ```bash
 cp .env.example .env
 ```
-Add your `HF_TOKEN` and `GITHUB_TOKEN` to the `.env` file.
+Add your `GROQ_API_KEY` and `GITHUB_TOKEN` to the `.env` file.
 
 ### 4. Run the Platform
 ```bash
@@ -87,7 +87,7 @@ streamlit run app.py
 
 VeriFAI LLM is built on a modular stack:
 *   **Frontend:** Streamlit with a custom-engineered "Malware Analyzer" dark theme.
-*   **Intelligence:** Hugging Face Serverless Inference API (Qwen2.5-Coder-32B).
+*   **Intelligence:** Groq API (Qwen-2.5-Coder-32B or other supported models).
 *   **Static Analysis:** Semgrep OSS Engine.
 *   **Storage:** SQLite (Local) & InsForge (Cloud Persistence).
 

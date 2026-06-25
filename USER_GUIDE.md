@@ -36,7 +36,7 @@ The **Scanner** is the core of the platform. You can provide code in four ways:
 ### Running a Scan
 Click **Run Scan** to trigger the multi-stage pipeline:
 *   **Stage 1:** Semgrep scans for known patterns.
-*   **Stage 2:** Qwen2.5-Coder-32B performs deep reasoning on flagged sections.
+*   **Stage 2:** qwen-2.5-coder-32b performs deep reasoning on flagged sections.
 *   **Stage 3:** The AI traces dependencies across files to confirm vulnerabilities.
 *   **Stage 4:** A detailed PDF report is generated for download.
 

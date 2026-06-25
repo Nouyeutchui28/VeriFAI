@@ -3,7 +3,7 @@
 # This script starts both the FastAPI backend and the Streamlit frontend.
 
 # Configuration
-PROJECT_DIR="/home/bruns/Pictures/VeriFAI LLM"
+PROJECT_DIR="/home/bruns/Documents/VeriFAI 1/VeriFAI LLM"
 VENV_PATH="$PROJECT_DIR/venv"
 BACKEND_PORT=8000
 FRONTEND_PORT=8502

@@ -239,26 +239,40 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
                         
                         # Persist to Backend
                         api_client = get_api_client()
-                        sc_id = str(uuid.uuid4())
-                        u_id = st.session_state.get("user_id") or st.session_state.get("user_info", {}).get("id", "anonymous_user")
                         
-                        api_client.save_scan_insforge({
-                            "id": sc_id, "user_id": u_id, "status": "complete",
-                            "project_name": f"GitHub: {extract_repo_info(st.session_state.github_repo_url)[1]}",
-                            "start_time": datetime.now().isoformat(), "end_time": datetime.now().isoformat(),
-                        })
+                        proj_name = f"GitHub: {extract_repo_info(st.session_state.github_repo_url)[1]}"
+                        save_scan_resp = api_client.submit_scan(project_name=proj_name, repo_url=st.session_state.github_repo_url)
+                        
+                        if isinstance(save_scan_resp, dict) and "error" in save_scan_resp:
+                            logger.warning(f"Scan save failed: {save_scan_resp['error']}")
+                            sc_id = str(uuid.uuid4())
+                        else:
+                            sc_id = save_scan_resp.get("id", str(uuid.uuid4()))
+                            api_client.update_scan_status(
+                                sc_id, 
+                                status="complete", 
+                                file_count=len(flagged_files),
+                                primary_language="python"
+                            )
                         
                         sev_c = {}
                         for r in findings:
                             s = r.get("severity", "unknown").lower()
                             sev_c[s] = sev_c.get(s, 0) + 1
                         
-                        result_id = str(uuid.uuid4())
-                        api_client.save_result_insforge({
-                            "id": result_id, "scan_id": sc_id, "code_snippet": primary_code_content[:2000],
-                            "semgrep_json": semgrep_results, "llm_analysis": combined_analysis,
-                            "patches": combined_patch, "severity_count": sev_c,
-                        })
+                        save_res_resp = api_client.save_results(
+                            scan_id=sc_id,
+                            code_snippet=primary_code_content[:2000],
+                            semgrep_json=semgrep_results,
+                            llm_analysis=combined_analysis,
+                            patches=combined_patch,
+                            severity_count=sev_c,
+                        )
+                        
+                        if isinstance(save_res_resp, dict) and "error" in save_res_resp:
+                            logger.warning(f"Result save failed: {save_res_resp['error']}")
+                            
+                        result_id = save_res_resp.get("id", str(uuid.uuid4())) if isinstance(save_res_resp, dict) else str(uuid.uuid4())
 
                         # Step 4: Finalize
                         st.session_state.analysis_results = {
