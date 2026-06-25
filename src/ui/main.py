@@ -8,7 +8,27 @@ load_dotenv()
 import pandas as pd
 import atexit
 from datetime import datetime
+import subprocess
+import time
+import socket
 
+@st.cache_resource
+def start_backend():
+    def is_port_in_use(port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            return s.connect_ex(('localhost', port)) == 0
+
+    if not is_port_in_use(8000):
+        print("Starting FastAPI backend in the background...")
+        # Start uvicorn without blocking
+        subprocess.Popen(["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"])
+        # Give it a moment to boot
+        for _ in range(15):
+            if is_port_in_use(8000):
+                break
+            time.sleep(1)
+
+start_backend()
 # Import UI Components & Utilities
 from src.ui.scanner_tab import render_scanner_tab
 from src.ui.chat_tab import render_chat_tab
