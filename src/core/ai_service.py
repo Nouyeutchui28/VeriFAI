@@ -115,18 +115,42 @@ def generate_remediation_patch(semgrep_results: dict, code_snippet: str, file_pa
     4. Cryptography: Use only modern, secure algorithms (e.g., Argon2, AES-GCM). Replace MD5/SHA1.
     5. Completeness: Return the ENTIRE functional code block so it can replace the original.
     
-    OUTPUT ONLY VALID JSON matching this exact structure:
-    {
-      "file_path": "...",
-      "patched_code": "The complete, SECURED code."
-    }"""
+    OUTPUT FORMAT:
+    Output the complete, SECURED code block wrapped in ```python ... ``` markdown."""
     
     findings_str = json.dumps(semgrep_results.get("results", [])[:10])
     prompt = f"File: {file_path}\nTarget Vulnerabilities to Fix: {findings_str}\n\nOriginal Code:\n{code_snippet}"
     
     try:
-        response = get_ai_response(prompt, system_msg, temperature)
-        return _parse_json_from_response(response)
+        from langchain_core.messages import SystemMessage, HumanMessage
+        messages = [
+            SystemMessage(content=system_msg),
+            HumanMessage(content=prompt)
+        ]
+        chat_out = generate_chat_response(messages, temperature)
+        if "error" in chat_out:
+            return {"error": chat_out["error"]}
+            
+        raw_text = chat_out.get("response", "")
+        patched_code = ""
+        
+        if "```" in raw_text:
+            parts = raw_text.split("```")
+            for p in parts:
+                p_strip = p.strip()
+                if p_strip.startswith("python"):
+                    patched_code = p_strip[6:].strip()
+                    break
+                elif p_strip and not p_strip.startswith("#"):
+                    patched_code = p_strip
+                    break
+        else:
+            patched_code = raw_text
+            
+        return {
+            "file_path": file_path,
+            "patched_code": patched_code
+        }
     except Exception as e:
         return {"error": f"API unavailable. Unable to generate AI patch at this time. Details: {e}"}
 
@@ -145,18 +169,46 @@ def unified_scan_and_patch(semgrep_results: dict, code_snippet: str, file_path: 
     - Use secure-by-default libraries (e.g., sqlalchemy for DB, argon2 for hashing).
     - Ensure the 'fixed_code' is functional, complete, and VULNERABILITY-FREE.
     
-    OUTPUT ONLY VALID JSON matching this exact structure:
-    {{
-      "analysis": "A detailed security report.",
-      "fixed_code": "The complete, SECURED code block."
-    }}"""
+    OUTPUT FORMAT:
+    Provide a detailed security analysis first, then output the complete, SECURED code block wrapped in ```python ... ``` markdown."""
     
     findings_str = json.dumps(semgrep_results.get("results", [])[:5])
     prompt = f"File: {file_path}\nFindings: {findings_str}\n\nCode:\n{code_snippet}"
     
     try:
-        response = get_ai_response(prompt, system_msg, temperature)
-        return _parse_json_from_response(response)
+        from langchain_core.messages import SystemMessage, HumanMessage
+        messages = [
+            SystemMessage(content=system_msg),
+            HumanMessage(content=prompt)
+        ]
+        chat_out = generate_chat_response(messages, temperature)
+        if "error" in chat_out:
+            return {"error": chat_out["error"]}
+            
+        raw_text = chat_out.get("response", "")
+        
+        # Parse the raw text to extract analysis and fixed_code
+        fixed_code = ""
+        analysis = raw_text
+        
+        if "```" in raw_text:
+            parts = raw_text.split("```")
+            for p in parts:
+                p_strip = p.strip()
+                if p_strip.startswith("python"):
+                    fixed_code = p_strip[6:].strip()
+                    break
+                elif p_strip and not p_strip.startswith("#"):
+                    fixed_code = p_strip
+                    break
+            
+            # The analysis is whatever came before the first code block
+            analysis = parts[0].strip()
+            
+        return {
+            "analysis": analysis,
+            "fixed_code": fixed_code
+        }
     except Exception as e:
         return {"error": f"API unavailable. Unable to generate unified scan and patch. Details: {e}"}
 
