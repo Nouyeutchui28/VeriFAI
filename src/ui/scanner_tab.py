@@ -142,6 +142,23 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
     if not target_path or not os.path.exists(target_path):
         st.error(":material/error: Error: Target path does not exist.")
         return
+
+    # Check for Python language
+    is_python = False
+    if os.path.isdir(target_path):
+        for root, dirs, files in os.walk(target_path):
+            if any(f.endswith('.py') for f in files):
+                is_python = True
+                break
+    else:
+        if (target_path.endswith('.py') or 
+            (actual_filename and actual_filename.endswith('.py')) or 
+            (patch_file_path and patch_file_path.endswith('.py'))):
+            is_python = True
+
+    if not is_python:
+        st.error(":material/error: this is not a python code")
+        return
     
     st.session_state.analysis_results = None
     st.session_state.scan_running = True
@@ -317,7 +334,7 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
             
             # Verification Success Message
             if st.session_state.get("patch_verified") and not findings:
-                st.success(":material/celebration: VERIFICATION PASSED: All vulnerabilities have been successfully resolved in the new version!")
+                st.success(":material/celebration: Verification successful: no owaps top 10 vulnerability detected.")
                 st.session_state.patch_verified = False # Reset flag after successful pass
 
         except Exception as e:

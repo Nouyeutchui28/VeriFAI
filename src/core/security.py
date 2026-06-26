@@ -729,7 +729,7 @@ def unified_security_scan(semgrep_results, code_snippet, llm=None, file_path="ma
             verify_results = run_semgrep_scan(tmp_path)
             num_findings = len(verify_results.get("results", []))
             if num_findings == 0:
-                verification_msg = "\n\n:material/check_circle: Verification successful: no vulnerability owaps detected."
+                verification_msg = "\n\n:material/check_circle: Verification successful: no owaps top 10 vulnerability detected."
             else:
                 verification_msg = f"\n\n:material/warning: Verification note: {num_findings} remaining OWASP vulnerabilities detected in the patched code."
         finally:
