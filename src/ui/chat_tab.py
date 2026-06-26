@@ -135,26 +135,68 @@ def render_chat_tab():
                                     break
                 
                 if extracted_patch:
-                    # Initialize analysis_results if not present
+                    # 1. Resolve target path and patch root
+                    import os
+                    from src.ui.scanner_tab import _resolve_patch_target
+                    from src.core.file_utils import apply_patch
+                    from src.ui.patch_review import extract_patched_code
+                    
+                    target_path = st.session_state.get("last_scan_file") or "main.py"
+                    if st.session_state.get("analysis_results"):
+                        target_path = st.session_state.analysis_results.get("target_path") or target_path
+                    
+                    patch_root = _resolve_patch_target(target_path)
+                    
+                    # 2. Automatically apply patch to make it the remediation code
+                    apply_res = apply_patch(extracted_patch, patch_root, dry_run=False)
+                    st.session_state.patch_applied = True
+                    
+                    # 3. Update analysis_results dict
                     if "analysis_results" not in st.session_state or not st.session_state.analysis_results:
                         st.session_state.analysis_results = {
                             "code_content": code_context,
-                            "target_path": st.session_state.get("last_scan_file") or "main.py",
-                            "patch_file_path": st.session_state.get("last_scan_file") or "main.py",
+                            "target_path": target_path,
+                            "patch_file_path": target_path,
                             "result_id": "chat_generated",
                             "llm_analysis": security_analysis or "Generated from chat",
                             "semgrep_results": {"results": []}
                         }
                     else:
                         st.session_state.analysis_results["code_content"] = st.session_state.analysis_results.get("code_content") or code_context
-                        st.session_state.analysis_results["target_path"] = st.session_state.analysis_results.get("target_path") or (st.session_state.get("last_scan_file") or "main.py")
-                        st.session_state.analysis_results["patch_file_path"] = st.session_state.analysis_results.get("patch_file_path") or (st.session_state.get("last_scan_file") or "main.py")
+                        st.session_state.analysis_results["target_path"] = st.session_state.analysis_results.get("target_path") or target_path
+                        st.session_state.analysis_results["patch_file_path"] = st.session_state.analysis_results.get("patch_file_path") or target_path
                     
                     st.session_state.analysis_results["patch_suggestions"] = extracted_patch
+                    
+                    # 4. Configure scan target for verification scan
+                    patched_preview = extract_patched_code(code_context, extracted_patch) if code_context else None
+                    if target_path and os.path.exists(target_path):
+                        if os.path.isdir(target_path):
+                            st.session_state.pop("scanner_zip_file", None)
+                            st.session_state.pop("scanner_uploaded_file", None)
+                            st.session_state.scanner_github_repo_path = target_path
+                        else:
+                            st.session_state.pop("scanner_zip_file", None)
+                            st.session_state.pop("scanner_uploaded_file", None)
+                            try:
+                                with open(target_path, "r") as f:
+                                    st.session_state.scanner_paste_code = f.read()
+                            except:
+                                st.session_state.scanner_paste_code = patched_preview
+                    else:
+                        st.session_state.pop("scanner_zip_file", None)
+                        st.session_state.pop("scanner_uploaded_file", None)
+                        st.session_state.scanner_paste_code = patched_preview or code_context
+                    
+                    # 5. Trigger the automatic verification scan
+                    st.session_state.run_scan_request = True
+                    st.session_state.patch_verified = True
                     st.session_state.patch_generated_from_chat = True
                 
                 st.session_state.chat_history.append({"role": "assistant", "content": response})
             st.session_state.prefill_prompt = ""
+            if extracted_patch:
+                AppState.set_page(":material/analytics: Security Scanner")
             st.rerun()
 
     with right:

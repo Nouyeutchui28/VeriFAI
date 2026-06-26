@@ -160,11 +160,11 @@ def render_patch_review_panel(
                     # For directories, we use the path
                     st.session_state.pop("scanner_zip_file", None) # Clear ZIP
                     st.session_state.pop("scanner_uploaded_file", None)
-                    # We might need a special state to tell scanner to use this path
-                    # but for now, let's try to set it as a "cloned" repo path
                     st.session_state.scanner_github_repo_path = target_path
                 else:
-                    # For single files, we can just read it back as paste
+                    # For single files, we clear upload/zip states so it falls back to Paste mode
+                    st.session_state.pop("scanner_zip_file", None)
+                    st.session_state.pop("scanner_uploaded_file", None)
                     try:
                         with open(target_path, "r") as f:
                             st.session_state.scanner_paste_code = f.read()
@@ -172,6 +172,8 @@ def render_patch_review_panel(
                         st.session_state.scanner_paste_code = current_patched_preview
             else:
                 # If not applied to disk, use the in-memory preview
+                st.session_state.pop("scanner_zip_file", None)
+                st.session_state.pop("scanner_uploaded_file", None)
                 st.session_state.scanner_paste_code = current_patched_preview or original_code
 
             # 2. Trigger Scan Request
