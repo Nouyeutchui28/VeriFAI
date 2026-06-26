@@ -206,6 +206,8 @@ def _build_semgrep_command(target_path, metrics_enabled=False):
         "--output",
         "results/res.json",
         "--config=p/owasp-top-ten",
+        "--config=p/security-audit",
+        "--config=auto",
         "--timeout",
         "60", # Reduce per-file timeout for speed
         "--error", 
