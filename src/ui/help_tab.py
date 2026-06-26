@@ -8,16 +8,16 @@ def render_help_tab():
     """Render the help and documentation page with professional design."""
 
     tab1, tab2, tab3, tab4 = st.tabs([
-        "🚀 Quick Start",
-        "❓ FAQ",
-        "⌨️ Shortcuts",
-        "🔗 Resources"
+        ":material/rocket_launch: Quick Start",
+        ":material/help: FAQ",
+        ":material/keyboard: Shortcuts",
+        ":material/link: Resources"
     ])
 
     with tab1:
-        st.header("🚀 Getting Started")
+        st.header(":material/rocket_launch: Getting Started")
 
-        with st.expander("**📝 Step 1: Basic Scanning (2 min)**", expanded=True):
+        with st.expander("**:material/edit: Step 1: Basic Scanning (2 min)**", expanded=True):
             st.markdown("""
             1. Navigate to **Security Scanner**
             2. Choose input method:
@@ -29,37 +29,37 @@ def render_help_tab():
             4. Review results in the analysis tabs
             """)
 
-        with st.expander("**📊 Step 2: Understanding Results (3 min)**"):
+        with st.expander("**:material/analytics: Step 2: Understanding Results (3 min)**"):
             st.markdown("""
             ### Result Tabs
 
-            **🚀 Intelligence Hub**
+            **:material/rocket_launch: Intelligence Hub**
             - AI security analysis
             - Severity levels & counts
             - Detailed vulnerability descriptions
 
-            **🛡️ Fixes**
+            **:material/shield: Fixes**
             - Step-by-step remediation
             - Code examples & best practices
             - Prevention strategies
 
-            **🔧 Patches**
+            **:material/build: Patches**
             - Automatic patch files
             - Unified diff format
             - Ready to apply with git apply
-
+            
             ### Severity Levels
-            - 🔴 **CRITICAL**: Immediate security risk
-            - 🟠 **HIGH**: Significant vulnerability
-            - 🟡 **MEDIUM**: Notable issue to address
-            - 🟢 **LOW**: Minor recommendation
+            - :material/error: **CRITICAL**: Immediate security risk
+            - :material/warning: **HIGH**: Significant vulnerability
+            - :material/info: **MEDIUM**: Notable issue to address
+            - :material/check_circle: **LOW**: Minor recommendation
             """)
 
-        with st.expander("**💬 Step 3: AI Chat Analysis (2 min)**"):
+        with st.expander("**:material/chat: Step 3: AI Chat Analysis (2 min)**"):
             st.markdown("""
             After scanning, you can ask the AI security analyst questions:
 
-            1. Click **💬 Security Intelligence Chat** in the sidebar
+            1. Click **:material/chat: Security Intelligence Chat** in the sidebar
             2. Ask about specific vulnerabilities:
                - *"Explain this SQL injection issue"*
                - *"How do I fix this authentication bug?"*
@@ -70,12 +70,12 @@ def render_help_tab():
 
         st.divider()
         render_info_banner(
-            "💡 Tip: Use the Settings tab to configure LLM model selection and temperature for different analysis styles.",
+            ":material/lightbulb: Tip: Use the Settings tab to configure LLM model selection and temperature for different analysis styles.",
             type="info"
         )
 
     with tab2:
-        st.header("❓ Frequently Asked Questions")
+        st.header(":material/help: Frequently Asked Questions")
 
         faq_items = [
             {
@@ -113,10 +113,10 @@ def render_help_tab():
                 "question": "Can I scan private repositories?",
                 "answer": """
                 Yes! Follow these steps:
-                1. Go to ⚙️ **Settings** → **Security & API**
+                1. Go to :material/settings: **Settings** → **Security & API**
                 2. Add your GitHub Personal Access Token
                 3. Ensure the token has `repo` scope
-                4. Go to 📦 **Project Repositories**
+                4. Go to :material/folder: **Project Repositories**
                 5. Enter the private repo URL and scan
 
                 Your credentials are never logged or transmitted insecurely.
@@ -136,7 +136,7 @@ def render_help_tab():
             {
                 "question": "Can I generate custom rules?",
                 "answer": """
-                Yes! Use the 📋 **Custom Rules** tab:
+                Yes! Use the :material/assignment: **Custom Rules** tab:
                 1. Describe the vulnerability pattern you want to detect
                 2. Provide example code
                 3. Click **Generate Semgrep Rule**
@@ -168,7 +168,7 @@ def render_help_tab():
                 st.markdown(item["answer"])
 
     with tab3:
-        st.header("⌨️ Keyboard Shortcuts")
+        st.header(":material/keyboard: Keyboard Shortcuts")
 
         shortcuts = [
             ("Tab", "Navigate between elements"),
@@ -195,9 +195,9 @@ def render_help_tab():
                 st.markdown(action)
 
     with tab4:
-        st.header("🔗 Resources & Documentation")
-
-        render_settings_group("🔗 External Resources", "Links to helpful documentation")
+        st.header(":material/link: Resources & Documentation")
+        
+        render_settings_group(":material/link: External Resources", "Links to helpful documentation")
 
         st.markdown("""
         ### Official Documentation
@@ -213,7 +213,7 @@ def render_help_tab():
 
         st.divider()
 
-        st.subheader("🧠 AI Alignment & Training")
+        st.subheader(":material/psychology: AI Alignment & Training")
         st.markdown("""
         The intelligence behind **VeriFAI LLM** is not a generic AI. It has been specifically **aligned and specialized** for cybersecurity analysis through:
         

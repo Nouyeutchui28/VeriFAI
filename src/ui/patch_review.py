@@ -76,24 +76,24 @@ def render_patch_review_panel(
     """, unsafe_allow_html=True)
     
     if not patch_text or patch_text == "No patch suggestions.":
-        st.info("⚠️ No patches detected. Try scanning code with known vulnerabilities.")
+        st.info(":material/warning: No patches detected. Try scanning code with known vulnerabilities.")
         return
 
     # 1. PARSE PATCHES
     file_patches = parse_multi_file_patch(patch_text)
     if not file_patches:
-        st.error("❌ Malformed patch detected. AI failed to generate valid diff headers.")
+        st.error(":material/error: Malformed patch detected. AI failed to generate valid diff headers.")
         with st.expander("Debug Raw Output"): st.code(patch_text)
         return
 
     # 2. FILE SELECTION
     st.markdown('<div class="patch-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="patch-header"><p class="patch-title">🛠️ Multi-File Security Patch Review</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="patch-header"><p class="patch-title">:material/build: Multi-File Security Patch Review</p></div>', unsafe_allow_html=True)
     
     selected_file = st.selectbox(
         "Select file to review fix:",
         options=list(file_patches.keys()),
-        format_func=lambda x: f"📄 {x}",
+        format_func=lambda x: f":material/description: {x}",
         key=f"selector_{result_id}"
     )
     
@@ -128,27 +128,27 @@ def render_patch_review_panel(
             st.warning("Preview generation failed. Review raw diff below.")
 
     # 6. ACTIONS
-    st.markdown("### ⚡ Execution")
+    st.markdown("### :material/bolt: Execution")
     a_col1, a_col2, a_col3 = st.columns([1, 1, 2])
     
     with a_col1:
-        if st.button("🔍 Validate Fix", use_container_width=True, key=f"val_{result_id}_{selected_file}"):
+        if st.button(":material/search: Validate Fix", use_container_width=True, key=f"val_{result_id}_{selected_file}"):
             from ..core.file_utils import apply_patch
             res = apply_patch(current_patch, patch_root, dry_run=True)
-            if res.get("applied"): st.success("✅ Valid!")
-            else: st.error(f"❌ {res.get('message')}")
+            if res.get("applied"): st.success(":material/check_circle: Valid!")
+            else: st.error(f":material/error: {res.get('message')}")
             
     with a_col2:
-        if st.button("✅ Apply to File", type="primary", use_container_width=True, key=f"app_{result_id}_{selected_file}"):
+        if st.button(":material/check_circle: Apply to File", type="primary", use_container_width=True, key=f"app_{result_id}_{selected_file}"):
             from ..core.file_utils import apply_patch
             res = apply_patch(current_patch, patch_root, dry_run=False)
             if res.get("applied"): 
-                st.success("✅ Applied!")
+                st.success(":material/check_circle: Applied!")
                 st.session_state.patch_applied = True
-            else: st.error("❌ Failed")
+            else: st.error(":material/error: Failed")
 
     with a_col3:
-        if st.button("🛡️ Verify & Unlock Project Download", use_container_width=True, type="secondary", key=f"ver_{result_id}"):
+        if st.button(":material/shield: Verify & Unlock Project Download", use_container_width=True, type="secondary", key=f"ver_{result_id}"):
             # 1. Determine scan target
             if st.session_state.get("patch_applied") and target_path:
                 # If patches were applied to disk, scan the whole project directory/file
@@ -181,20 +181,20 @@ def render_patch_review_panel(
             # 3. Force clean state for redirection
             from ..utils.state import AppState
             st.balloons()
-            st.success("🔍 Security verification initiated...")
+            st.success(":material/search: Security verification initiated...")
             import time
             time.sleep(1)
-            AppState.set_page("📊 Security Scanner")
+            AppState.set_page(":material/analytics: Security Scanner")
 
     # Final Project ZIP Download
     if st.session_state.get("patch_verified"):
         st.markdown("---")
-        st.markdown("### 📦 Export Secured Version")
+        st.markdown("### :material/folder: Export Secured Version")
         from ..core.file_utils import create_zip_from_any
         try:
             zip_bytes = create_zip_from_any(target_path)
             st.download_button(
-                "📥 Download All Files (ZIP)",
+                ":material/download: Download All Files (ZIP)",
                 data=zip_bytes,
                 file_name=f"secured_{os.path.basename(target_path)}.zip" if os.path.isdir(target_path) else f"secured_{selected_file}.zip",
                 mime="application/zip",
@@ -210,7 +210,7 @@ def render_patch_review_panel(
         st.code(current_patch, language="diff")
 
         if st.button(
-            "🔄 Reset",
+            ":material/sync: Reset",
             key="patch_reset_btn",
             use_container_width=True,
         ):

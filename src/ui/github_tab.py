@@ -58,7 +58,7 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
                      llm_temperature=0, model_selection="deepseek-r1-distill-llama-70b"):
     """Render the dedicated repository analysis tab."""
 
-    st.header("📦 Project Repository Explorer")
+    st.header(":material/folder: Project Repository Explorer")
     st.markdown("Load and explore remote code repositories directly within the platform.")
 
     # Repository URL input
@@ -71,7 +71,7 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
         )
 
     with col2:
-        clone_button = st.button("📥 Load Repository", key="github_clone")
+        clone_button = st.button(":material/download: Load Repository", key="github_clone")
 
     # Initialize session state for GitHub
     if "github_repo_path" not in st.session_state:
@@ -82,11 +82,11 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
     # Handle cloning
     if clone_button:
         if not github_url.strip():
-            st.error("❌ Please enter a repository URL")
+            st.error(":material/error: Please enter a repository URL")
         elif not validate_github_url(github_url):
-            st.error("❌ Please enter a valid Git repository URL.")
+            st.error(":material/error: Please enter a valid Git repository URL.")
         else:
-            with st.spinner("🔄 Loading repository..."):
+            with st.spinner(":material/sync: Loading repository..."):
                 try:
                     temp_dir = os.path.join("temp_github", f"repo_{datetime.now().strftime('%Y%m%d%H%M%S')}")
                     os.makedirs(temp_dir, exist_ok=True)
@@ -95,14 +95,14 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
                     st.session_state.github_repo_path = repo_path
                     st.session_state.github_repo_url = github_url
 
-                    st.success("✅ Repository cloned successfully!")
+                    st.success(":material/check_circle: Repository cloned successfully!")
                     st.rerun()
                 except TimeoutError:
-                    st.error("❌ Clone operation timed out. Repository might be too large.")
+                    st.error(":material/error: Clone operation timed out. Repository might be too large.")
                 except RuntimeError as e:
-                    st.error(f"❌ Clone failed: {str(e)}")
+                    st.error(f":material/error: Clone failed: {str(e)}")
                 except Exception as e:
-                    st.error(f"❌ Unexpected error: {str(e)}")
+                    st.error(f":material/error: Unexpected error: {str(e)}")
 
     # Display repository info and analysis interface
     if st.session_state.github_repo_path:
@@ -131,7 +131,7 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
 
             # Language breakdown
             if language_stats:
-                st.subheader("📊 Language Distribution")
+                st.subheader(":material/analytics: Language Distribution")
                 sorted_stats = dict(sorted(language_stats.items(), key=lambda x: x[1], reverse=True)[:10])
                 st.bar_chart(sorted_stats)
 
@@ -141,14 +141,14 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
         st.markdown("---")
 
         # Analysis section
-        st.subheader("🔍 Security Analysis")
+        st.subheader(":material/search: Security Analysis")
 
         col_left, col_right = st.columns([2, 3])
 
         with col_left:
-            st.info("ℹ️ Repository is ready for analysis. Click the button to run security scan.")
+            st.info(":material/info: Repository is ready for analysis. Click the button to run security scan.")
 
-            if st.button("🔐 Run Security Scan", key="github_scan"):
+            if st.button(":material/security: Run Security Scan", key="github_scan"):
                 try:
                     from concurrent.futures import ThreadPoolExecutor, as_completed
                     from ..core.security import unified_security_scan, resolve_local_dependencies
@@ -158,15 +158,15 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
                     progress_placeholder = st.empty()
                     status_placeholder = st.empty()
 
-                    with status_placeholder.status("🔍 Initializing Repository Scan...", expanded=True) as status:
+                    with status_placeholder.status(":material/search: Initializing Repository Scan...", expanded=True) as status:
                         # Step 1: Semgrep Static Analysis
-                        status.update(label="🚀 Running Semgrep Static Analysis... (Step 1/4)", state="running")
+                        status.update(label=":material/rocket_launch: Running Semgrep Static Analysis... (Step 1/4)", state="running")
                         progress_placeholder.progress(0.1, text="Analyzing repository patterns with Semgrep...")
                         semgrep_results = run_semgrep_scan(repo_path, metrics_enabled)
                         findings = semgrep_results.get("results", [])
 
                         # Step 2: Parallel AI Analysis & Patching
-                        status.update(label="🤖 Running AI Security Analysis... (Step 2/4)", state="running")
+                        status.update(label=":material/smart_toy: Running AI Security Analysis... (Step 2/4)", state="running")
                         progress_placeholder.progress(0.3, text="Initializing AI engine for deep repository review...")
                         
                         # Identify all unique flagged files
@@ -217,7 +217,7 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
                                 try:
                                     analysis, patch, fcode = future.result()
                                     if analysis:
-                                        all_llm_analyses.append(f"### 📄 File: {fname}\n{analysis}")
+                                        all_llm_analyses.append(f"### :material/description: File: {fname}\n{analysis}")
                                     if patch and patch != "No patch suggestions.":
                                         all_patches.append(patch)
                                     if not primary_code_content and fcode:
@@ -228,11 +228,11 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
                                 progress_placeholder.progress(0.3 + (0.4 * (completed_count / len(flagged_files))), 
                                                            text=f"Analyzing: {completed_count}/{len(flagged_files)} vulnerable files...")
 
-                        combined_analysis = "\n\n---\n\n".join(all_llm_analyses) or "⚠️ No vulnerabilities found in AI deep-scan. Review Semgrep results."
+                        combined_analysis = "\n\n---\n\n".join(all_llm_analyses) or ":material/warning: No vulnerabilities found in AI deep-scan. Review Semgrep results."
                         combined_patch = "\n\n".join(all_patches) or "No patch suggestions."
 
                         # Step 3: Build & Save
-                        status.update(label="📄 Building Security Report... (Step 3/4)", state="running")
+                        status.update(label=":material/description: Building Security Report... (Step 3/4)", state="running")
                         progress_placeholder.progress(0.8, text="Finalizing report and persisting results...")
                         
                         report = generate_report(f"GitHub: {st.session_state.github_repo_url}", combined_analysis)
@@ -288,28 +288,28 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
                         }
                         
                         progress_placeholder.progress(1.0, text="Scan complete!")
-                        status.update(label="✅ Repository Analysis Complete!", state="complete", expanded=False)
+                        status.update(label=":material/check_circle: Repository Analysis Complete!", state="complete", expanded=False)
 
-                    st.success("✅ Analysis complete! Results are ready.")
+                    st.success(":material/check_circle: Analysis complete! Results are ready.")
                     st.balloons()
                     st.rerun()
 
                 except Exception as e:
-                    st.error(f"❌ Analysis error: {str(e)}")
+                    st.error(f":material/error: Analysis error: {str(e)}")
                     import traceback
                     st.error(traceback.format_exc())
 
-            if st.button("🗑️ Clean Up Repository", key="github_cleanup"):
+            if st.button(":material/delete: Clean Up Repository", key="github_cleanup"):
                 try:
                     if cleanup_repo(repo_path):
                         st.session_state.github_repo_path = None
                         st.session_state.github_repo_url = None
-                        st.success("✅ Repository cleaned up successfully!")
+                        st.success(":material/check_circle: Repository cleaned up successfully!")
                         st.rerun()
                     else:
-                        st.warning("⚠️ Could not fully clean up repository")
+                        st.warning(":material/warning: Could not fully clean up repository")
                 except Exception as e:
-                    st.error(f"❌ Cleanup error: {str(e)}")
+                    st.error(f":material/error: Cleanup error: {str(e)}")
 
         # Display analysis results
         with col_right:
@@ -335,11 +335,11 @@ def render_github_tab(metrics_enabled=False, custom_config=None,
                     if prev.get('patch_suggestions'):
                         st.code(prev['patch_suggestions'], language="diff")
                         st.download_button(
-                            "📥 Download Patch",
+                            ":material/download: Download Patch",
                             prev['patch_suggestions'],
                             file_name="github_repo.patch"
                         )
                     else:
                         st.info("No patches generated yet. Patches are created when Semgrep finds vulnerabilities.")
             else:
-                st.info("💡 Run security scan to view analysis results here")
+                st.info(":material/lightbulb: Run security scan to view analysis results here")

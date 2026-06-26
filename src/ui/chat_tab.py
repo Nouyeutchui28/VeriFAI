@@ -94,7 +94,7 @@ def render_chat_tab():
                         llm,
                     )
                 else:
-                    response = "❌ Could not initialize the LLM. Check your API configuration."
+                    response = ":material/error: Could not initialize the LLM. Check your API configuration."
                 st.session_state.chat_history.append({"role": "assistant", "content": response})
             st.session_state.prefill_prompt = ""
             st.rerun()
@@ -123,7 +123,7 @@ def render_chat_tab():
         else:
             st.markdown("<div style='color: #8b909e; margin-bottom: 1rem;'>no scan loaded — run a scan first</div>", unsafe_allow_html=True)
             if st.button("Go to Scanner", key="chat_go_to_scanner"):
-                AppState.set_page("📊 Security Scanner")
+                AppState.set_page(":material/analytics: Security Scanner")
 
         st.markdown('<div style="margin-top: 1.5rem; margin-bottom: 0.75rem;"><strong>Quick ask</strong></div>', unsafe_allow_html=True)
         prompts = [

@@ -126,12 +126,12 @@ def _render_status_badge(status):
         "idle": "#8b909e",
     }
     icons = {
-        "done": "✔",
-        "running": "●",
-        "error": "✖",
-        "idle": "○",
+        "done": "<svg width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' style='vertical-align: middle; display: inline-block;'><polyline points='20 6 9 17 4 12'></polyline></svg>",
+        "running": "<span style='display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: currentColor; vertical-align: middle;'></span>",
+        "error": "<svg width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' style='vertical-align: middle; display: inline-block;'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg>",
+        "idle": "<span style='display: inline-block; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid currentColor; vertical-align: middle;'></span>",
     }
-    return f"<span style='color: {colors[status]}; font-family: DM Mono, monospace;'>{icons[status]}</span>"
+    return f"<span style='color: {colors[status]};'>{icons[status]}</span>"
 
 
 def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""):
@@ -140,7 +140,7 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
     from ..core.security import unified_security_scan
     
     if not target_path or not os.path.exists(target_path):
-        st.error("❌ Error: Target path does not exist.")
+        st.error(":material/error: Error: Target path does not exist.")
         return
     
     st.session_state.analysis_results = None
@@ -152,16 +152,16 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
     progress_placeholder = st.empty()
     status_placeholder = st.empty()
 
-    with status_placeholder.status("🔍 Initializing Security Scan...", expanded=True) as status:
+    with status_placeholder.status(":material/search: Initializing Security Scan...", expanded=True) as status:
         try:
             # Step 1: Semgrep Static Analysis
-            status.update(label="🚀 Running Semgrep Static Analysis... (Step 1/3)", state="running")
+            status.update(label=":material/rocket_launch: Running Semgrep Static Analysis... (Step 1/3)", state="running")
             progress_placeholder.progress(0.1, text="Analyzing code patterns with Semgrep...")
             sem_res = run_semgrep_scan(target_path, True)
             findings = sem_res.get("results", [])
             
             # Step 2: Parallel AI Analysis & Patching
-            status.update(label="🤖 Running Parallel AI Analysis... (Step 2/3)", state="running")
+            status.update(label=":material/smart_toy: Running Parallel AI Analysis... (Step 2/3)", state="running")
             progress_placeholder.progress(0.4, text="Initializing Hugging Face engine for concurrent analysis...")
             
             llm = None
@@ -226,7 +226,7 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
                     try:
                         analysis, patch = future.result()
                         if analysis: 
-                            all_llm_analyses.append(f"### 📄 File: {fname}\n{analysis}")
+                            all_llm_analyses.append(f"### :material/description: File: {fname}\n{analysis}")
                         if patch and patch != "No patch suggestions.": 
                             all_patches.append(patch)
                     except Exception as e:
@@ -238,7 +238,7 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
                         text=f"AI Expert Analysis: {completed_count}/{len(flagged_files)} files..."
                     )
             
-            combined_analysis = "\n\n---\n\n".join(all_llm_analyses) or "⚠️ No vulnerabilities found in AI deep-scan. Review Semgrep results."
+            combined_analysis = "\n\n---\n\n".join(all_llm_analyses) or ":material/warning: No vulnerabilities found in AI deep-scan. Review Semgrep results."
             combined_patch = "\n\n".join(all_patches) or "No patch suggestions."
             
             # Ensure code_content is populated for single files if it was empty
@@ -249,7 +249,7 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
                 except: pass
             
             # Step 3: Build & Save
-            status.update(label="📄 Building Security Report... (Step 3/3)", state="running")
+            status.update(label=":material/description: Building Security Report... (Step 3/3)", state="running")
             progress_placeholder.progress(0.9, text="Finalizing report and saving results...")
             
             report = generate_report(code_content, sem_res, combined_analysis)
@@ -313,17 +313,17 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
             st.session_state.last_scan_file = actual_filename
 
             progress_placeholder.progress(1.0, text="Scan complete!")
-            status.update(label="✅ Security Scan Complete!", state="complete", expanded=False)
+            status.update(label=":material/check_circle: Security Scan Complete!", state="complete", expanded=False)
             
             # Verification Success Message
             if st.session_state.get("patch_verified") and not findings:
-                st.success("🎉 VERIFICATION PASSED: All vulnerabilities have been successfully resolved in the new version!")
+                st.success(":material/celebration: VERIFICATION PASSED: All vulnerabilities have been successfully resolved in the new version!")
                 st.session_state.patch_verified = False # Reset flag after successful pass
 
         except Exception as e:
             st.session_state.scan_error = True
-            status.update(label="❌ Analysis Failed", state="error")
-            st.error(f"❌ Analysis failed: {str(e)}")
+            status.update(label=":material/error: Analysis Failed", state="error")
+            st.error(f":material/error: Analysis failed: {str(e)}")
         finally:
             st.session_state.scan_running = False
             st.session_state.run_scan_request = False
@@ -511,7 +511,7 @@ def unsafe_pickle():
     data = pickle.loads(user_data)  # Unsafe deserialize
     return data
 '''
-            if st.button("📋 Load Sample Vulnerable Code", key="sample_code_btn"):
+            if st.button(":material/assignment: Load Sample Vulnerable Code", key="sample_code_btn"):
                 st.session_state.scanner_paste_code = sample_code
                 st.success("Sample code loaded! Click 'Run Scan' to analyze.")
                 st.rerun()
@@ -602,7 +602,7 @@ def unsafe_pickle():
             col_open_chat, col_copy = st.columns(2)
             with col_open_chat:
                 if st.button("Ask AI about findings ↗", use_container_width=True, key="scanner_ask_ai"):
-                    AppState.set("current_page", "💬 Intelligence Chat")
+                    AppState.set("current_page", ":material/chat: Intelligence Chat")
                     st.session_state.quick_ask_prompt = "Explain all findings"
                     st.session_state.last_scan_code = code_content
                     st.session_state.last_scan_results = result
@@ -617,7 +617,7 @@ def unsafe_pickle():
                     st.session_state.last_scan_file = st.session_state.get('last_scan_file', '') or result.get('target_path', '')
                     st.session_state.llm_analysis = llm_analysis
                     st.session_state.quick_ask_prompt = "Explain all findings"
-                    AppState.set_page("💬 Intelligence Chat")
+                    AppState.set_page(":material/chat: Intelligence Chat")
 
             pdf_bytes = None
             try:
@@ -628,8 +628,8 @@ def unsafe_pickle():
             if pdf_bytes:
                 st.download_button("Download PDF Report", pdf_bytes, file_name="security_audit.pdf", mime="application/pdf", use_container_width=True)
 
-            if st.button("🛠️ Review Security Patches", type="primary", use_container_width=True, key="goto_patches_btn"):
-                AppState.set_page("🛠️ Patch Review")
+            if st.button(":material/build: Review Security Patches", type="primary", use_container_width=True, key="goto_patches_btn"):
+                AppState.set_page(":material/build: Patch Review")
                 st.rerun()
 
             st.markdown('</div>', unsafe_allow_html=True)
@@ -646,7 +646,7 @@ def unsafe_pickle():
         with tab_analysis:
             if llm_analysis:
                 st.markdown('<div class="analysis-container">', unsafe_allow_html=True)
-                st.markdown('<div class="analysis-title">🛡️ AI Security Analysis</div>', unsafe_allow_html=True)
+                st.markdown('<div class="analysis-title">:material/shield: AI Security Analysis</div>', unsafe_allow_html=True)
                 st.markdown(llm_analysis)
                 st.markdown('</div>', unsafe_allow_html=True)
             else:
@@ -669,7 +669,7 @@ def unsafe_pickle():
                         patch_file_path=results.get("patch_file_path", ""),
                     )
                 except Exception as e:
-                    st.error(f"⚠️ Unable to render interactive patch review panel: {e}")
+                    st.error(f":material/warning: Unable to render interactive patch review panel: {e}")
                     with st.expander("View Raw Patch Diff"):
                         st.code(patch_text, language="diff")
             else:

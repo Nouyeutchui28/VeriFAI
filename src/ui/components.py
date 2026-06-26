@@ -70,7 +70,7 @@ def render_loading_pulse(text: str = "Loading...") -> None:
 def render_metric_card(
     label: str,
     value: str | int,
-    icon: str = "📊",
+    icon: str = ":material/analytics:",
     change: Optional[str] = None,
     change_type: str = "neutral"  # "positive", "negative", "neutral"
 ) -> None:
@@ -150,20 +150,21 @@ def render_metric_card(
 def render_status_badge(status: str, label: str = "") -> None:
     """Render a professional status badge."""
     status_colors = {
-        "active": ("#00e676", "🟢"),
-        "inactive": ("#ff3b3b", "🔴"),
-        "analyzing": ("#00e5ff", "🔵"),
-        "complete": ("#00e676", "✅"),
-        "error": ("#ff3b3b", "❌"),
-        "warning": ("#f59e0b", "⚠️"),
+        "active": "#00e676",
+        "inactive": "#ff3b3b",
+        "analyzing": "#00e5ff",
+        "complete": "#00e676",
+        "error": "#ff3b3b",
+        "warning": "#f59e0b",
     }
-    color, icon = status_colors.get(status.lower(), ("#8b9bb4", "⚪"))
+    color = status_colors.get(status.lower(), "#8b9bb4")
     display_label = label or status.upper()
 
     st.markdown(f"""
     <div style="
-        display: inline-block;
-        background-color: rgba(0, 229, 255, 0.1);
+        display: inline-flex;
+        align-items: center;
+        background-color: rgba(0, 229, 255, 0.03);
         border: 1px solid {color};
         border-radius: 4px;
         padding: 0.4rem 0.8rem;
@@ -173,19 +174,30 @@ def render_status_badge(status: str, label: str = "") -> None:
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-    ">{icon} {display_label}</div>
+        line-height: 1;
+    ">
+        <span style="
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: {color};
+            margin-right: 8px;
+        "></span>
+        {display_label}
+    </div>
     """, unsafe_allow_html=True)
 
 
 def render_info_banner(message: str, type: str = "info") -> None:
     """Render information banner."""
     colors = {
-        "info": ("00e5ff", "ℹ️"),
-        "success": ("00e676", "✅"),
-        "warning": ("f59e0b", "⚠️"),
-        "error": ("ff3b3b", "❌")
+        "info": ("00e5ff", ":material/info:"),
+        "success": ("00e676", ":material/check_circle:"),
+        "warning": ("f59e0b", ":material/warning:"),
+        "error": ("ff3b3b", ":material/error:")
     }
-    color, icon = colors.get(type, ("00e5ff", "ℹ️"))
+    color, icon = colors.get(type, ("00e5ff", ":material/info:"))
 
     st.markdown(f"""
     <div style="
@@ -199,7 +211,7 @@ def render_info_banner(message: str, type: str = "info") -> None:
     """, unsafe_allow_html=True)
 
 
-def render_settings_group(title: str, icon: str = "⚙️", description: str = "") -> None:
+def render_settings_group(title: str, icon: str = ":material/settings:", description: str = "") -> None:
     """Render settings group header."""
     st.markdown(f"""
     <div style="margin-bottom: 1rem;">
@@ -224,7 +236,7 @@ def render_action_button(text: str, icon: str = "→") -> bool:
 def render_result_card(
     title: str,
     content: str,
-    icon: str = "🔍",
+    icon: str = ":material/search:",
     severity: Optional[str] = None,
     collapsible: bool = False
 ) -> None:
@@ -333,10 +345,10 @@ def render_info_banner(
         icon: Custom icon emoji
     """
     icons = {
-        "info": "ℹ️",
-        "warning": "⚠️",
-        "error": "❌",
-        "success": "✅"
+        "info": ":material/info:",
+        "warning": ":material/warning:",
+        "error": ":material/error:",
+        "success": ":material/check_circle:"
     }
     colors = {
         "info": "#3b82f6",
@@ -345,7 +357,7 @@ def render_info_banner(
         "success": "#10b981"
     }
 
-    display_icon = icon or icons.get(type, "ℹ️")
+    display_icon = icon or icons.get(type, ":material/info:")
     display_color = colors.get(type, "#3b82f6")
 
     st.markdown(
@@ -375,7 +387,7 @@ def render_info_banner(
 
 def render_settings_group(
     title: str,
-    icon: str = "⚙️",
+    icon: str = ":material/settings:",
     description: Optional[str] = None
 ) -> None:
     """
@@ -462,10 +474,10 @@ def render_progress_step(
         "error": "#ef4444"
     }
     status_icons = {
-        "pending": "⏳",
-        "running": "▶️",
-        "completed": "✅",
-        "error": "❌"
+        "pending": ":material/hourglass_empty:",
+        "running": ":material/play_arrow:",
+        "completed": ":material/check_circle:",
+        "error": ":material/error:"
     }
 
     color = status_colors.get(status, "#94a3b8")

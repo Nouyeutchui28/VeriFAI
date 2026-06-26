@@ -13,12 +13,12 @@ from src.db.connection import init_db
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize database
-    print("📦 Initializing database...")
+    print(":material/folder: Initializing database...")
     try:
         init_db()
-        print("✅ Database initialized successfully.")
+        print(":material/check_circle: Database initialized successfully.")
     except Exception as e:
-        print(f"❌ Database initialization failed: {e}")
+        print(f":material/error: Database initialization failed: {e}")
     yield
 
 app = FastAPI(

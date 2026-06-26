@@ -12,7 +12,7 @@ class AppState:
         "user_info": None,
         "user_id": None,
         "access_token": None,
-        "current_page": "🏠 Dashboard",
+        "current_page": ":material/dashboard: Dashboard",
         "prev_page": None,
         "chat_history": [],
         "analysis_results": None,

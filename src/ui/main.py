@@ -45,15 +45,15 @@ from src.utils.state import AppState
 from src.utils.report_gen import generate_pdf_report
 
 NAV_ITEMS = [
-    ("Dashboard", "🏠 Dashboard"),
-    ("Scanner", "📊 Security Scanner"),
-    ("Patch Review", "🛠️ Patch Review"),
-    ("History", "🕒 Scan History"),
-    ("Intelligence Chat", "💬 Intelligence Chat"),
-    ("Repositories", "📦 Project Repositories"),
-    ("Custom Rules", "📋 Custom Rules"),
-    ("Help", "📚 Help"),
-    ("Settings", "⚙️ Settings"),
+    ("Dashboard", ":material/dashboard: Dashboard"),
+    ("Scanner", ":material/analytics: Security Scanner"),
+    ("Patch Review", ":material/build: Patch Review"),
+    ("History", ":material/history: Scan History"),
+    ("Intelligence Chat", ":material/chat: Intelligence Chat"),
+    ("Repositories", ":material/folder: Project Repositories"),
+    ("Custom Rules", ":material/assignment: Custom Rules"),
+    ("Help", ":material/menu_book: Help"),
+    ("Settings", ":material/settings: Settings"),
 ]
 
 
@@ -61,7 +61,7 @@ def configure_app():
     """Initial app configuration."""
     st.set_page_config(
         page_title="VeriFAI LLM - AI Security Scanner",
-        page_icon="🛡️",
+        page_icon=":material/shield:",
         layout="wide",
         initial_sidebar_state="expanded"
     )
@@ -377,7 +377,7 @@ def render_sidebar_navigation(current_page):
         is_active = current_page == page_value
         display_label = label
         if label == "Intelligence Chat":
-            display_label = f"💬 Chat [Live]"
+            display_label = f":material/chat: Chat [Live]"
             
         if st.sidebar.button(
             display_label, 
@@ -394,7 +394,7 @@ def render_sidebar_navigation(current_page):
         is_active = current_page == page_value
         display_label = label
         if label == "Custom Rules":
-            display_label = f"📋 Rules ({rules_count})"
+            display_label = f":material/assignment: Rules ({rules_count})"
             
         if st.sidebar.button(
             display_label, 
@@ -420,7 +420,7 @@ def render_sidebar_navigation(current_page):
     )
 
     if st.sidebar.button("Edit", key="sidebar_edit", use_container_width=True):
-        AppState.set_page("⚙️ Settings")
+        AppState.set_page(":material/settings: Settings")
 
 
 def render_top_bar(current_page):
@@ -488,7 +488,7 @@ def render_top_bar(current_page):
             st.markdown(f'<div class="status-pill" style="margin-top: 5px;"><span class="status-dot {status_class}"></span> semgrep</div>', unsafe_allow_html=True)
 
         has_results = bool(st.session_state.get("analysis_results"))
-        if current_page == "📊 Security Scanner":
+        if current_page == ":material/analytics: Security Scanner":
             if has_results:
                 try:
                     result = st.session_state.analysis_results
@@ -511,7 +511,7 @@ def render_top_bar(current_page):
         else:
             cols[3].button("Export Report", disabled=True, use_container_width=True)
 
-        if current_page == "📊 Security Scanner":
+        if current_page == ":material/analytics: Security Scanner":
             if cols[4].button("Run Scan", key="top_run_scan", use_container_width=True, type="primary"):
                 st.session_state.run_scan_request = True
                 st.rerun()
@@ -556,7 +556,7 @@ def render_dashboard_fragment():
             "fixed_issues": 28,
             "security_score": 84
         }
-        st.warning("⚠️ **Running in Demo Mode:** Showing simulated security intelligence until you run your first scan.")
+        st.warning(":material/warning: **Running in Demo Mode:** Showing simulated security intelligence until you run your first scan.")
 
     # 1. METRICS GRID
     m1, m2, m3, m4 = st.columns(4)
@@ -575,7 +575,7 @@ def render_dashboard_fragment():
     # 2. VISUAL INTELLIGENCE
     v1, v2 = st.columns([2, 1])
     with v1:
-        st.markdown("#### 📈 Analysis Velocity (Last 7 Days)")
+        st.markdown("#### :material/trending_up: Analysis Velocity (Last 7 Days)")
         try:
             history = [] if is_mock else api_client.get_scan_history(limit=15)
             if not history and is_mock:
@@ -600,7 +600,7 @@ def render_dashboard_fragment():
         except: st.info("Real-time data currently unavailable.")
 
     with v2:
-        st.markdown("#### 🛡️ Threat Distribution")
+        st.markdown("#### :material/shield: Threat Distribution")
         try:
             severity_data = {} if is_mock else api_client.get_severity_stats()
             
@@ -622,7 +622,7 @@ def render_dashboard_fragment():
     st.markdown("---")
     
     # 3. LIVE ACTIVITY FEED
-    st.markdown("#### 📡 Live Infrastructure Status")
+    st.markdown("#### :material/sensors: Live Infrastructure Status")
     s1, s2, s3 = st.columns(3)
     
     db_status = "ready" if not is_mock else "warning"
@@ -653,7 +653,7 @@ def render_dashboard_fragment():
     # 4. DETAILED THREAT RECORDS TABLE
     if not is_mock:
         st.markdown("---")
-        st.markdown("#### 📋 Detected Vulnerability Records (Real-Time)")
+        st.markdown("#### :material/assignment: Detected Vulnerability Records (Real-Time)")
         
         try:
             scans = api_client.get_scan_history(limit=50)
@@ -669,11 +669,11 @@ def render_dashboard_fragment():
                                 severity = f.get("severity", "unknown").upper()
                                 # Mapping severity to emoji/badge
                                 if severity in ["ERROR", "CRITICAL"]:
-                                    sev_emoji = "🔴 CRITICAL"
+                                    sev_emoji = ":material/error: CRITICAL"
                                 elif severity in ["WARNING", "HIGH"]:
-                                    sev_emoji = "🟡 WARNING"
+                                    sev_emoji = ":material/warning: WARNING"
                                 else:
-                                    sev_emoji = "🔵 INFO"
+                                    sev_emoji = ":material/info: INFO"
                                     
                                 records.append({
                                     "Project Name": scan.get("project_name", "Unknown"),
@@ -696,7 +696,7 @@ def render_dashboard_fragment():
                         }
                     )
                 else:
-                    st.info("🎉 No active vulnerability records detected in your scans.")
+                    st.info(":material/celebration: No active vulnerability records detected in your scans.")
             else:
                 st.info("No scan history found.")
         except Exception as e:
@@ -711,19 +711,19 @@ def main():
         return
 
     if not AppState.get("legal_agreed"):
-        @st.dialog("⚖️ Legal & Ethical Usage Warning")
+        @st.dialog(":material/gavel: Legal & Ethical Usage Warning")
         def show_legal_warning():
-            st.warning("### 🚨 CRITICAL: AUTHORIZED USE ONLY")
+            st.warning("### :material/warning: CRITICAL: AUTHORIZED USE ONLY")
             
             st.markdown("""
             This tool is designed for **defensive security research** and **authorized testing** only. Using this tool on systems or codebases you do not own or have explicit, written permission to test is **illegal and unethical**.
 
-            #### ⚠️ Legal Dangers of Unauthorized Use
+            #### :material/warning: Legal Dangers of Unauthorized Use
             *   **Criminal Liability:** Scanning or accessing unauthorized systems may violate the **Computer Fraud and Abuse Act (CFAA)** or similar international cybercrime laws, leading to heavy fines or imprisonment.
             *   **Civil Lawsuits:** Owners of unauthorized targets can sue for damages, even if no harm was intended.
             *   **Employment/Academic Risk:** Unauthorized testing can result in immediate termination or expulsion.
 
-            #### 🔒 Important Security Aspects
+            #### :material/lock: Important Security Aspects
             1.  **AI Hallucinations:** AI-generated security patches (remediations) may be incorrect or introduce new bugs. **Always manually review and test every patch** in a safe environment before deployment.
             2.  **Data Privacy:** Code sent for analysis may be processed by external APIs (Hugging Face). Ensure you do not scan code containing sensitive secrets, PII, or proprietary information unless authorized.
             3.  **No Guarantee:** This tool assists in detection but does not guarantee 100% security. It should be part of a broader security strategy.
@@ -741,15 +741,15 @@ def main():
     render_sidebar_navigation(current_page)
     render_top_bar(current_page)
 
-    if current_page == "🏠 Dashboard":
+    if current_page == ":material/dashboard: Dashboard":
         st.markdown('<div class="dashboard-title">Security Command Center</div>', unsafe_allow_html=True)
         st.markdown('<div class="dashboard-subtitle">Real-time threat intelligence and infrastructure health</div>', unsafe_allow_html=True)
         render_dashboard_fragment()
 
-    elif current_page == "📊 Security Scanner":
+    elif current_page == ":material/analytics: Security Scanner":
         render_scanner_tab()
 
-    elif current_page == "🛠️ Patch Review":
+    elif current_page == ":material/build: Patch Review":
         st.markdown('<div class="dashboard-title">Security Patch Review</div>', unsafe_allow_html=True)
         st.markdown('<div class="dashboard-subtitle">Review and apply AI-generated security fixes</div>', unsafe_allow_html=True)
         
@@ -775,7 +775,7 @@ def main():
                         patch_file_path=results.get("patch_file_path", ""),
                     )
                 except Exception as e:
-                    st.error(f"⚠️ Unable to render interactive patch review panel. The patch diff may be malformed or incompatible with this file. Please review the patch text manually.")
+                    st.error(f":material/warning: Unable to render interactive patch review panel. The patch diff may be malformed or incompatible with this file. Please review the patch text manually.")
                     with st.expander("View Raw Patch Diff"):
                         st.code(patch_text, language="diff")
             else:
@@ -783,32 +783,32 @@ def main():
         else:
             st.info("Run a scan first to see patch suggestions here.")
 
-    elif current_page == "🕒 Scan History":
+    elif current_page == ":material/history: Scan History":
         st.markdown('<div class="dashboard-title">Scan History Explorer</div>', unsafe_allow_html=True)
         st.markdown('<div class="dashboard-subtitle">Review previous security analysis results</div>', unsafe_allow_html=True)
         render_history_tab()
 
-    elif current_page == "📋 Custom Rules":
+    elif current_page == ":material/assignment: Custom Rules":
         st.markdown('<div class="dashboard-title">Custom Security Rules</div>', unsafe_allow_html=True)
         st.markdown('<div class="dashboard-subtitle">Create and manage custom detection rules</div>', unsafe_allow_html=True)
         render_rules_tab()
 
-    elif current_page == "📦 Project Repositories":
+    elif current_page == ":material/folder: Project Repositories":
         st.markdown('<div class="dashboard-title">Project Repositories</div>', unsafe_allow_html=True)
         st.markdown('<div class="dashboard-subtitle">Scan GitHub repositories for security vulnerabilities</div>', unsafe_allow_html=True)
         render_github_tab(metrics_enabled=True, llm_temperature=st.session_state.get('llm_temperature', 0.2), model_selection=st.session_state.get('model_selection', 'secure-patch-model'))
 
-    elif current_page == "💬 Intelligence Chat":
+    elif current_page == ":material/chat: Intelligence Chat":
         st.markdown('<div class="dashboard-title">Security Intelligence Chat</div>', unsafe_allow_html=True)
         st.markdown('<div class="dashboard-subtitle">Ask questions and get security insights</div>', unsafe_allow_html=True)
         render_chat_tab()
 
-    elif current_page == "📚 Help":
+    elif current_page == ":material/menu_book: Help":
         st.markdown('<div class="dashboard-title">Help & Documentation</div>', unsafe_allow_html=True)
         st.markdown('<div class="dashboard-subtitle">Learn how to use VeriFAI LLM</div>', unsafe_allow_html=True)
         render_help_tab()
 
-    elif current_page == "⚙️ Settings":
+    elif current_page == ":material/settings: Settings":
         st.markdown('<div class="dashboard-title">Settings & Preferences</div>', unsafe_allow_html=True)
         st.markdown('<div class="dashboard-subtitle">Configure application behavior and preferences</div>', unsafe_allow_html=True)
         render_settings_tab()

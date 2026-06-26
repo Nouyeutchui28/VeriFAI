@@ -80,10 +80,10 @@ def handle_ui_error(
 
     # Show user-friendly error in Streamlit
     with st.container():
-        st.error(f"❌ {friendly_msg}")
+        st.error(f":material/error: {friendly_msg}")
 
         if show_retry:
-            st.info("💡 Try again or contact support if the problem persists.")
+            st.info(":material/lightbulb: Try again or contact support if the problem persists.")
 
 
 def handle_ui_warning(message: str, context: str = "") -> None:

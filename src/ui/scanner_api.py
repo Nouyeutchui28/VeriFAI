@@ -16,7 +16,7 @@ def render_scanner_tab_with_api(scan_target_type, uploaded_file=None, uploaded_f
     """Render scanner tab with backend API integration."""
 
     if not st.session_state.get("user_id"):
-        st.warning("⚠️ Please log in first to submit scans")
+        st.warning(":material/warning: Please log in first to submit scans")
         return {}
 
     col1, col2 = st.columns([2, 3])
@@ -27,13 +27,13 @@ def render_scanner_tab_with_api(scan_target_type, uploaded_file=None, uploaded_f
     with col1:
         st.subheader("Code Preview")
 
-        if scan_target_type == "📝 Direct Code Input":
+        if scan_target_type == ":material/edit: Direct Code Input":
             code_content = code_input or ""
             st.code(code_content if code_content else "# Paste code here")
             if code_content:
                 target_path = save_code_to_temp_file(code_content)
 
-        elif scan_target_type == "📤 Upload File" and uploaded_file:
+        elif scan_target_type == ":material/upload_file: Upload File" and uploaded_file:
             try:
                 code_content = uploaded_file.getvalue().decode("utf-8")
                 st.code(code_content)
@@ -41,7 +41,7 @@ def render_scanner_tab_with_api(scan_target_type, uploaded_file=None, uploaded_f
             except Exception as e:
                 st.error(f"Error reading file: {e}")
 
-        elif scan_target_type == "📤 Upload Multiple Files" and uploaded_files:
+        elif scan_target_type == ":material/upload_file: Upload Multiple Files" and uploaded_files:
             st.info(f"Selected {len(uploaded_files)} files")
             if uploaded_files:
                 selected_file = st.selectbox("Select file to preview:", [file.name for file in uploaded_files])
@@ -62,7 +62,7 @@ def render_scanner_tab_with_api(scan_target_type, uploaded_file=None, uploaded_f
                     f.write(file.getvalue())
             target_path = folder_path
 
-        elif scan_target_type == "📦 Upload ZIP" and uploaded_file:
+        elif scan_target_type == ":material/folder: Upload ZIP" and uploaded_file:
             st.info("Uploaded ZIP file will be extracted and scanned")
             try:
                 target_path = extract_zip(uploaded_file)
@@ -95,30 +95,30 @@ def render_scanner_tab_with_api(scan_target_type, uploaded_file=None, uploaded_f
         result_tabs = st.tabs(["LLM Analysis", "Semgrep Results", "Patch Suggestions"])
 
         # Run analysis button
-        if st.button("🔍 Run Security Scan"):
+        if st.button(":material/search: Run Security Scan"):
             if not target_path:
-                st.error("❌ No code to scan")
+                st.error(":material/error: No code to scan")
                 return {}
 
             try:
                 api_client = get_api_client()
 
                 # Submit scan to backend
-                st.info("📤 Submitting scan to backend...")
+                st.info(":material/upload: Submitting scan to backend...")
                 scan_response = api_client.submit_scan(
                     project_name="Direct Upload",
                     repo_url=None
                 )
 
                 if "error" in scan_response:
-                    st.error(f"❌ Failed to submit scan: {scan_response['error']}")
+                    st.error(f":material/error: Failed to submit scan: {scan_response['error']}")
                     return {}
 
                 scan_id = scan_response.get("id")
-                st.success(f"✅ Scan submitted: {scan_id}")
+                st.success(f":material/check_circle: Scan submitted: {scan_id}")
 
                 # Run local analysis
-                st.info("📋 Running Semgrep...")
+                st.info(":material/assignment: Running Semgrep...")
                 semgrep_results = run_semgrep_scan(target_path, metrics_enabled)
 
                 patch_file_path = ""
@@ -126,10 +126,10 @@ def render_scanner_tab_with_api(scan_target_type, uploaded_file=None, uploaded_f
                     _, patch_file_path = extract_primary_code_sample(target_path)
                     patch_file_path = patch_file_path or os.path.basename(target_path)
 
-                st.info("📋 Running LLM analysis...")
+                st.info(":material/assignment: Running LLM analysis...")
                 llm_analysis = run_llm_analysis(code_content, semgrep_results, llm_temperature, model_selection)
 
-                st.info("📋 Generating patches...")
+                st.info(":material/assignment: Generating patches...")
                 try:
                     patch_suggestions = generate_patch_suggestions(semgrep_results, code_content[:3000],
                                                                  None,
@@ -140,7 +140,7 @@ def render_scanner_tab_with_api(scan_target_type, uploaded_file=None, uploaded_f
                 report = generate_report(code_content, llm_analysis)
 
                 # Save results to backend
-                st.info("💾 Saving results to backend...")
+                st.info(":material/save: Saving results to backend...")
                 results_response = api_client.save_results(
                     scan_id=scan_id,
                     code_snippet=code_content[:3000],
@@ -162,19 +162,19 @@ def render_scanner_tab_with_api(scan_target_type, uploaded_file=None, uploaded_f
                     'scan_id': scan_id
                 }
                 st.session_state.analysis_results = results
-                st.success("✅ Analysis complete!")
+                st.success(":material/check_circle: Analysis complete!")
                 return results
 
             except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+                st.error(f":material/error: Error: {str(e)}")
 
         # Display existing results
         if existing_patch:
             with result_tabs[2]:
-                st.subheader("🔧 Patch Suggestions")
+                st.subheader(":material/build: Patch Suggestions")
                 st.code(existing_patch)
                 st.download_button("Download patch file", existing_patch, file_name="patch.diff")
-                if existing_target and st.button("✅ Apply patch", key="apply_patch"):
+                if existing_target and st.button(":material/check_circle: Apply patch", key="apply_patch"):
                     result = apply_patch(existing_patch, existing_target, dry_run=False, create_backup=True)
                     if isinstance(result, dict) and result.get("applied"):
                         st.success(f"Patch applied: {result.get('message', 'Success')}")

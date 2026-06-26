@@ -4,25 +4,25 @@ from ..core.infra_engine import run_infra_scan
 
 def render_infra_tab(model_selection, llm_temperature):
     """Render the Infrastructure Reconnaissance tab (Shodan-style)."""
-    st.title("🌐 Infrastructure Reconnaissance")
+    st.title(":material/public: Infrastructure Reconnaissance")
     st.markdown("Scan public-facing assets to identify open services and potential misconfigurations.")
 
     target = st.text_input("Enter Target (Domain or IP)", placeholder="example.com or 192.168.1.1")
     
     col1, col2 = st.columns([1, 4])
     with col1:
-        scan_button = st.button("🚀 Start Recon", type="primary", use_container_width=True)
+        scan_button = st.button(":material/rocket_launch: Start Recon", type="primary", use_container_width=True)
     
     if scan_button and target:
-        with st.status(f"🔍 Scanning {target}...", expanded=True) as status:
-            status.update(label="📡 Probing ports and banners...", state="running")
+        with st.status(f":material/search: Scanning {target}...", expanded=True) as status:
+            status.update(label=":material/sensors: Probing ports and banners...", state="running")
             results = run_infra_scan(target)
             
             if "error" in results:
                 st.error(results["error"])
                 return
 
-            status.update(label="🧠 Analyzing findings with AI...", state="running")
+            status.update(label=":material/psychology: Analyzing findings with AI...", state="running")
             
             # AI Analysis of the banners
             llm = None
@@ -39,12 +39,12 @@ def render_infra_tab(model_selection, llm_temperature):
             """
             
             ai_analysis = llm.invoke(prompt).content if llm else "AI Analysis unavailable."
-            status.update(label="✅ Recon Complete!", state="complete")
+            status.update(label=":material/check_circle: Recon Complete!", state="complete")
 
         # Display Results
         st.success(f"Discovered {len(results['findings'])} open services on {results['ip']}")
         
-        tab1, tab2 = st.tabs(["📊 Service Map", "🧠 AI Intelligence Report"])
+        tab1, tab2 = st.tabs([":material/analytics: Service Map", ":material/psychology: AI Intelligence Report"])
         
         with tab1:
             if results['findings']:

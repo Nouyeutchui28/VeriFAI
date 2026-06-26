@@ -10,17 +10,17 @@ def render_settings_tab():
     """Render the unified settings page with professional styling."""
 
     tab1, tab2, tab3, tab4 = st.tabs([
-        "🧠 LLM Config",
-        "🎨 Appearance",
-        "📊 Scan Defaults",
-        "🔐 Security"
+        ":material/psychology: LLM Config",
+        ":material/palette: Appearance",
+        ":material/analytics: Scan Defaults",
+        ":material/security: Security"
     ])
 
     # ========================================================================
     # TAB 1: LLM CONFIGURATION
     # ========================================================================
     with tab1:
-        st.markdown("### 🧠 Language Model Settings")
+        st.markdown("### :material/psychology: Language Model Settings")
         render_info_banner(
             "Configure LLM parameters for security analysis intelligence",
             type="info"
@@ -29,7 +29,7 @@ def render_settings_tab():
         col1, col2 = st.columns(2)
 
         with col1:
-            render_settings_group("Model Selection", "🤖", "Groq API Active")
+            render_settings_group("Model Selection", ":material/smart_toy:", "Groq API Active")
             model_options = [
                 "qwen-2.5-coder-32b"
             ]
@@ -40,10 +40,10 @@ def render_settings_tab():
                 key="settings_model_select",
                 label_visibility="collapsed"
             )
-            st.info("🚀 Groq API Complete: Using qwen-2.5-coder-32b.")
+            st.info(":material/rocket_launch: Groq API Complete: Using qwen-2.5-coder-32b.")
 
         with col2:
-            render_settings_group("Response Variation", "🎲", "Creativity vs Consistency")
+            render_settings_group("Response Variation", ":material/casino:", "Creativity vs Consistency")
             temp_value = st.slider(
                 "Temperature",
                 min_value=0.0,
@@ -58,7 +58,7 @@ def render_settings_tab():
 
         st.divider()
 
-        render_settings_group("Advanced LLM Settings", "🔧")
+        render_settings_group("Advanced LLM Settings", ":material/settings:")
         col1, col2, col3 = st.columns(3)
 
         with col1:
@@ -92,20 +92,20 @@ def render_settings_tab():
     # TAB 2: APPEARANCE
     # ========================================================================
     with tab2:
-        st.markdown("### 🎨 User Interface Preferences")
+        st.markdown("### :material/palette: User Interface Preferences")
         render_info_banner(
             "Customize the appearance and behavior of the interface",
             type="info"
         )
 
-        render_settings_group("Theme Settings", "🌙")
+        render_settings_group("Theme Settings", ":material/dark_mode:")
         theme = st.selectbox(
             "Theme",
             ["Dark Mode (Default)", "Light Mode", "Auto (System)"],
             label_visibility="collapsed"
         )
 
-        render_settings_group("Display Options", "👁️")
+        render_settings_group("Display Options", ":material/visibility:")
         col1, col2 = st.columns(2)
         with col1:
             compact_mode = st.checkbox("Compact Mode", value=False, help="Reduce spacing and padding")
@@ -116,57 +116,57 @@ def render_settings_tab():
     # TAB 3: SCAN DEFAULTS
     # ========================================================================
     with tab3:
-        st.markdown("### 📊 Scan Behavior")
+        st.markdown("### :material/analytics: Scan Behavior")
         render_info_banner(
             "Set default parameters for security scans",
             type="info"
         )
 
-        render_settings_group("Default Scan Type", "📝")
+        render_settings_group("Default Scan Type", ":material/edit:")
         default_scan = st.selectbox(
             "Scan Type",
             ["Direct Code Input", "File Upload", "Multiple Files", "ZIP Archive", "GitHub Repository"],
             label_visibility="collapsed"
         )
 
-        render_settings_group("Scan Options", "⚙️")
+        render_settings_group("Scan Options", ":material/settings:")
         col1, col2 = st.columns(2)
         with col1:
             auto_save = st.checkbox("Auto-Save Results", value=True)
         with col2:
             generate_reports = st.checkbox("Generate Reports", value=True)
 
-        render_settings_group("Output Settings", "📁")
+        render_settings_group("Output Settings", ":material/folder:")
         st.text_input("Report Output Path", value="/tmp/reports/", label_visibility="collapsed")
 
     # ========================================================================
     # TAB 4: SECURITY & API
     # ========================================================================
     with tab4:
-        st.markdown("### 🔐 Security & Authentication")
+        st.markdown("### :material/security: Security & Authentication")
         render_info_banner(
             "Manage API keys, tokens, and security settings",
             type="warning"
         )
 
-        render_settings_group("API Configuration", "🔑")
+        render_settings_group("API Configuration", ":material/vpn_key:")
         with st.expander("View API Key (Click to reveal)"):
-            st.warning("⚠️ Keep your API key secret!")
+            st.warning(":material/warning: Keep your API key secret!")
             api_key = st.text_input("API Key", type="password", label_visibility="collapsed")
-            if st.button("🔄 Rotate API Key", type="secondary", use_container_width=True):
-                st.info("✅ API key rotated. Update your integrations.")
+            if st.button(":material/sync: Rotate API Key", type="secondary", use_container_width=True):
+                st.info(":material/check_circle: API key rotated. Update your integrations.")
 
-        render_settings_group("Session Management", "👤")
+        render_settings_group("Session Management", ":material/person:")
         col1, col2 = st.columns(2)
         with col1:
             st.metric("Current Session", "Active")
         with col2:
-            if st.button("🚪 Sign Out", use_container_width=True, type="secondary"):
+            if st.button(":material/logout: Sign Out", use_container_width=True, type="secondary"):
                 AppState.logout()
                 st.rerun()
 
         st.divider()
-        st.markdown("### 📋 About")
+        st.markdown("### :material/assignment: About")
         st.markdown("""
         **VeriFAI LLM** v1.0.0
         Security Analysis Platform powered by AI
@@ -176,13 +176,13 @@ def render_settings_tab():
 
     # ========================================================================
     with tab2:
-        st.header("🎨 UI Preferences")
+        st.header(":material/palette: UI Preferences")
         render_info_banner(
             "Customize the user interface appearance and behavior.",
             type="info"
         )
 
-        render_settings_group("Theme & Appearance", "🌙")
+        render_settings_group("Theme & Appearance", ":material/dark_mode:")
         col1, col2 = st.columns(2)
 
         with col1:
@@ -197,7 +197,7 @@ def render_settings_tab():
             )
             if theme != current_theme:
                 AppState.set("theme", theme)
-                handle_ui_success("✅ Theme updated! Refresh to apply.")
+                handle_ui_success(":material/check_circle: Theme updated! Refresh to apply.")
 
         with col2:
             notifications = st.checkbox(
@@ -210,7 +210,7 @@ def render_settings_tab():
 
         st.divider()
 
-        render_settings_group("Display Options", "📺")
+        render_settings_group("Display Options", ":material/tv:")
         col1, col2 = st.columns(2)
 
         with col1:
@@ -232,7 +232,7 @@ def render_settings_tab():
 
         st.divider()
 
-        render_settings_group("Accessibility", "♿")
+        render_settings_group("Accessibility", ":material/accessibility:")
         col1, col2 = st.columns(2)
 
         with col1:
@@ -255,13 +255,13 @@ def render_settings_tab():
     # TAB 3: SCAN DEFAULTS
     # ========================================================================
     with tab3:
-        st.header("📊 Scan Defaults")
+        st.header(":material/analytics: Scan Defaults")
         render_info_banner(
             "Configure default settings for security scans.",
             type="info"
         )
 
-        render_settings_group("File Size Limits", "📁")
+        render_settings_group("File Size Limits", ":material/folder:")
         col1, col2, col3 = st.columns(3)
 
         with col1:
@@ -290,7 +290,7 @@ def render_settings_tab():
 
         st.divider()
 
-        render_settings_group("Analysis Depth", "🔍")
+        render_settings_group("Analysis Depth", ":material/search:")
         col1, col2 = st.columns(2)
 
         with col1:
@@ -311,7 +311,7 @@ def render_settings_tab():
 
         st.divider()
 
-        render_settings_group("Timeout Settings", "⏱️")
+        render_settings_group("Timeout Settings", ":material/timer:")
         col1, col2, col3 = st.columns(3)
 
         with col1:
@@ -342,13 +342,13 @@ def render_settings_tab():
     # TAB 4: SECURITY & API
     # ========================================================================
     with tab4:
-        st.header("🔐 Security & API Keys")
+        st.header(":material/security: Security & API Keys")
         render_info_banner(
             "Manage API credentials and security settings. Keys are never transmitted or logged.",
             type="warning"
         )
 
-        render_settings_group("API Credentials", "🔑")
+        render_settings_group("API Credentials", ":material/vpn_key:")
 
         # Groq API Key
         st.markdown("**Groq API Key**")
@@ -362,7 +362,7 @@ def render_settings_tab():
         if groq_api_key and groq_api_key != os.getenv("GROQ_API_KEY"):
             # Optionally update .env or just use in session
             # For simplicity in this demo, we'll suggest saving it
-            st.info("💡 Don't forget to save settings to apply your new key.")
+            st.info(":material/lightbulb: Don't forget to save settings to apply your new key.")
             os.environ["GROQ_API_KEY"] = groq_api_key
 
         st.divider()
@@ -376,18 +376,18 @@ def render_settings_tab():
             help="Required for private repository scanning"
         )
         if github_token:
-            st.caption("✅ Token configured (masked for security)")
+            st.caption(":material/check_circle: Token configured (masked for security)")
 
         st.divider()
 
         # Groq Status
         st.markdown("**Groq Intelligence Engine**")
-        st.success("✅ System Context: qwen-2.5-coder-32b Active")
+        st.success(":material/check_circle: System Context: qwen-2.5-coder-32b Active")
         st.caption("The pipeline is now running using Groq API.")
 
         st.divider()
 
-        render_settings_group("Security Settings", "🛡️")
+        render_settings_group("Security Settings", ":material/shield:")
 
         col1, col2 = st.columns(2)
 
@@ -407,7 +407,7 @@ def render_settings_tab():
 
         st.divider()
 
-        render_settings_group("Data & Privacy", "📋")
+        render_settings_group("Data & Privacy", ":material/assignment:")
         col1, col2 = st.columns(2)
 
         with col1:
@@ -424,13 +424,13 @@ def render_settings_tab():
                 help="Help us improve by sharing anonymized usage data"
             )
 
-        if st.button("🗑️ Clear All Scan History", type="secondary", use_container_width=True):
+        if st.button(":material/delete: Clear All Scan History", type="secondary", use_container_width=True):
             if st.session_state.get("confirm_clear_history"):
                 st.warning("Scan history cleared!")
                 st.session_state.confirm_clear_history = False
             else:
                 st.session_state.confirm_clear_history = True
-                st.warning("⚠️ This will permanently delete all scan history. Click again to confirm.")
+                st.warning(":material/warning: This will permanently delete all scan history. Click again to confirm.")
 
     # ========================================================================
     # FOOTER
@@ -439,16 +439,16 @@ def render_settings_tab():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("💾 Save All Settings", type="primary", use_container_width=True):
-            handle_ui_success("✅ All settings saved successfully!")
+        if st.button(":material/save: Save All Settings", type="primary", use_container_width=True):
+            handle_ui_success(":material/check_circle: All settings saved successfully!")
 
     with col2:
-        if st.button("🔄 Reset to Defaults", type="secondary", use_container_width=True):
+        if st.button(":material/sync: Reset to Defaults", type="secondary", use_container_width=True):
             AppState.reset("model_selection")
             AppState.reset("llm_temperature")
             AppState.reset("theme")
-            handle_ui_success("✅ Settings reset to defaults!")
+            handle_ui_success(":material/check_circle: Settings reset to defaults!")
 
     with col3:
-        if st.button("📖 Help & Documentation", type="secondary", use_container_width=True):
-            st.info("📖 Visit our [documentation](https://github.com/codebytemirza/VeriFAI-LLM) for more help.")
+        if st.button(":material/menu_book: Help & Documentation", type="secondary", use_container_width=True):
+            st.info(":material/menu_book: Visit our [documentation](https://github.com/codebytemirza/VeriFAI-LLM) for more help.")

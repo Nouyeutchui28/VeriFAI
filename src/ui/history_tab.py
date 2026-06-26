@@ -5,7 +5,7 @@ from .api_client import get_api_client
 
 def render_history_tab():
     """Render the scan history explorer tab."""
-    st.markdown("### 🕒 Scan History Explorer")
+    st.markdown("### :material/history: Scan History Explorer")
     st.markdown("Browse and review previous security analysis results.")
 
     api_client = get_api_client()
@@ -42,7 +42,7 @@ def render_history_tab():
             selected_label = st.selectbox("Select a scan to review", options=list(scan_options.keys()))
             selected_scan_id = scan_options[selected_label]
             
-            if st.button("📂 Load Results", type="primary", use_container_width=True):
+            if st.button(":material/folder_open: Load Results", type="primary", use_container_width=True):
                 with st.spinner("Loading analysis results..."):
                     results_res = api_client.get_results(selected_scan_id)
                     
@@ -58,8 +58,8 @@ def render_history_tab():
                             "severity_count": results_res.get("severity_count"),
                             "target_path": "remote_storage"
                         }
-                        st.success(f"✅ Loaded results for: {selected_label}")
-                        st.session_state.current_page = "📊 Security Scanner"
+                        st.success(f":material/check_circle: Loaded results for: {selected_label}")
+                        st.session_state.current_page = ":material/analytics: Security Scanner"
                         st.rerun()
                     else:
                         st.error(f"Could not load results: {results_res.get('error', 'Unknown error')}")

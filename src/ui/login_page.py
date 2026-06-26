@@ -91,7 +91,7 @@ def render_login_page():
     st.markdown("""
     <div class="login-container">
         <div class="login-header">
-            <h1>🛡️ VeriFAI LLM</h1>
+            <h1>:material/shield: VeriFAI LLM</h1>
             <p>Security Analysis Platform</p>
         </div>
     </div>
@@ -110,19 +110,19 @@ def render_login_page():
 
         # 1. EMAIL VERIFICATION FLOW (OTP)
         if st.session_state.otp_verification_email and not st.session_state.recovery_mode:
-            st.markdown("### 📧 Email Verification")
+            st.markdown("### :material/email: Email Verification")
             st.info(f"Verification code sent to **{st.session_state.otp_verification_email}**")
 
             with st.form("otp_form"):
                 otp_code = st.text_input("6-Digit Code", placeholder="000000", max_chars=6)
-                verify_btn = st.form_submit_button("✅ Verify & Login", use_container_width=True, type="primary")
+                verify_btn = st.form_submit_button(":material/check_circle: Verify & Login", use_container_width=True, type="primary")
 
                 if verify_btn:
                     if not otp_code or len(otp_code) != 6:
-                        st.error("❌ Please enter a valid 6-digit code")
+                        st.error(":material/error: Please enter a valid 6-digit code")
                     else:
                         api_client = get_api_client()
-                        with st.spinner("🔍 Verifying..."):
+                        with st.spinner(":material/search: Verifying..."):
                             response = api_client.verify_token_insforge(st.session_state.otp_verification_email, otp_code)
 
                             if "error" not in response and "message" not in response:
@@ -132,14 +132,14 @@ def render_login_page():
                                     user_id=response.get("user", {}).get("id")
                                 )
                                 st.session_state.otp_verification_email = None
-                                st.success("✅ Email verified successfully!")
+                                st.success(":material/check_circle: Email verified successfully!")
                                 time.sleep(1)
                                 st.rerun()
                             else:
                                 error_msg = response.get('message', response.get('error', 'Verification failed'))
-                                st.error(f"❌ {error_msg}")
+                                st.error(f":material/error: {error_msg}")
             
-            if st.button("⬅️ Back to Login"):
+            if st.button(":material/arrow_back: Back to Login"):
                 st.session_state.otp_verification_email = None
                 st.rerun()
                 
@@ -147,7 +147,7 @@ def render_login_page():
 
         # 2. PASSWORD RECOVERY FLOW
         if st.session_state.recovery_mode:
-            st.markdown("### 🔑 Password Recovery")
+            st.markdown("### :material/vpn_key: Password Recovery")
             
             if not st.session_state.recovery_email:
                 # Step 1: Enter Email
@@ -164,12 +164,12 @@ def render_login_page():
                                 response = api_client.recover_password(rec_email)
                                 if "error" not in response and "message" not in response:
                                     st.session_state.recovery_email = rec_email
-                                    st.success(f"✅ Reset code sent to {rec_email}")
+                                    st.success(f":material/check_circle: Reset code sent to {rec_email}")
                                     time.sleep(1)
                                     st.rerun()
                                 else:
                                     error_msg = response.get('message', response.get('error', 'Recovery failed'))
-                                    st.error(f"❌ {error_msg}")
+                                    st.error(f":material/error: {error_msg}")
             else:
                 # Step 2: Enter OTP and New Password
                 st.info(f"Enter the 6-digit code sent to **{st.session_state.recovery_email}**")
@@ -189,29 +189,29 @@ def render_login_page():
                         else:
                             is_valid, msg = is_valid_password(new_password)
                             if not is_valid:
-                                st.error(f"❌ {msg}")
+                                st.error(f":material/error: {msg}")
                             else:
                                 api_client = get_api_client()
                                 with st.spinner("Resetting password..."):
                                     response = api_client.reset_password(st.session_state.recovery_email, otp_code, new_password)
                                     if "error" not in response and "message" not in response:
-                                        st.success("✅ Password reset successfully! You can now sign in.")
+                                        st.success(":material/check_circle: Password reset successfully! You can now sign in.")
                                         st.session_state.recovery_mode = False
                                         st.session_state.recovery_email = None
                                         time.sleep(2)
                                         st.rerun()
                                     else:
                                         error_msg = response.get('message', response.get('error', 'Reset failed'))
-                                        st.error(f"❌ {error_msg}")
+                                        st.error(f":material/error: {error_msg}")
             
-            if st.button("⬅️ Back to Login", key="back_from_recovery"):
+            if st.button(":material/arrow_back: Back to Login", key="back_from_recovery"):
                 st.session_state.recovery_mode = False
                 st.session_state.recovery_email = None
                 st.rerun()
             return
 
         # 3. STANDARD LOGIN / SIGNUP TABS
-        tab1, tab2 = st.tabs(["🔐 Sign In", "📝 Create Account"])
+        tab1, tab2 = st.tabs([":material/security: Sign In", ":material/edit: Create Account"])
         
         with tab1:
             with st.form("signin_form"):
@@ -236,12 +236,12 @@ def render_login_page():
                                     user_id=response.get("user", {}).get("id")
                                 )
                                 
-                                st.success("✅ Welcome back!")
+                                st.success(":material/check_circle: Welcome back!")
                                 time.sleep(1)
                                 st.rerun()
                             elif response.get('error') == 'EMAIL_NOT_VERIFIED' or 'verify' in str(response.get('message', '')).lower():
                                 st.session_state.otp_verification_email = email
-                                st.warning("⚠️ Email not verified. Please enter the OTP.")
+                                st.warning(":material/warning: Email not verified. Please enter the OTP.")
                                 time.sleep(1)
                                 st.rerun()
                             else:
@@ -269,7 +269,7 @@ def render_login_page():
                     else:
                         is_valid, msg = is_valid_password(new_password)
                         if not is_valid:
-                            st.error(f"❌ {msg}")
+                            st.error(f":material/error: {msg}")
                         else:
                             api_client = get_api_client()
                             with st.spinner("Creating account..."):
@@ -278,11 +278,11 @@ def render_login_page():
                                 if "error" not in response and "message" not in response:
                                     if response.get("requireEmailVerification"):
                                         st.session_state.otp_verification_email = new_email
-                                        st.success("✅ Account created! Please verify your email.")
+                                        st.success(":material/check_circle: Account created! Please verify your email.")
                                         time.sleep(1)
                                         st.rerun()
                                     else:
-                                        st.success("✅ Account created! Please sign in.")
+                                        st.success(":material/check_circle: Account created! Please sign in.")
                                         time.sleep(1)
                                 else:
                                     error_msg = response.get('message', response.get('error', 'Signup failed'))

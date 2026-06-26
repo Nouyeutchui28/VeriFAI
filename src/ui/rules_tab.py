@@ -33,7 +33,7 @@ def extract_yaml_blocks(text):
 
 def render_rules_tab():
     """Render the custom rules generation tab."""
-    st.subheader("📋 Generate Custom Semgrep Rules")
+    st.subheader(":material/assignment: Generate Custom Semgrep Rules")
     
     # Add direct code input for rule generation
     code_input = st.text_area(
@@ -51,7 +51,7 @@ def render_rules_tab():
         key="rules_vulnerability_input"
     )
     
-    if st.button("🔍 Generate Rules", key="generate_rules_button"):
+    if st.button(":material/search: Generate Rules", key="generate_rules_button"):
         with st.spinner("Generating Semgrep rules..."):
             llm = None
             
@@ -59,7 +59,7 @@ def render_rules_tab():
                 try:
                     rules = suggest_rules(code_input, vulnerability_input, llm)
                     
-                    st.markdown("## 📋 Generated Rules")
+                    st.markdown("## :material/assignment: Generated Rules")
                     st.markdown(rules)
                     
                     # Extract and validate YAML blocks
@@ -67,7 +67,7 @@ def render_rules_tab():
                     if yaml_blocks:
                         combined_yaml = "\n---\n".join(yaml_blocks)
                         st.download_button(
-                            "📥 Download Rules",
+                            ":material/download: Download Rules",
                             combined_yaml,
                             file_name="custom_semgrep_rules.yaml",
                             mime="text/yaml",

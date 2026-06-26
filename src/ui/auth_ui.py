@@ -10,10 +10,10 @@ def render_auth_ui():
         if st.session_state.get("user_id"):
             # Show user info
             user_info = st.session_state.get("user_info", {})
-            st.success(f"✅ Logged in as {user_info.get('name', 'User')}")
+            st.success(f":material/check_circle: Logged in as {user_info.get('name', 'User')}")
 
             # Show logout button
-            if st.button("🚪 Logout", key="logout_button"):
+            if st.button(":material/logout: Logout", key="logout_button"):
                 st.session_state.user_id = None
                 st.session_state.access_token = None
                 st.session_state.refresh_token = None
@@ -24,7 +24,7 @@ def render_auth_ui():
 
         else:
             # Show login options
-            st.subheader("🔐 Login")
+            st.subheader(":material/security: Login")
 
             login_option = st.radio(
                 "Choose login provider",
@@ -59,7 +59,7 @@ def render_auth_ui():
                     st.session_state.user_info = login_response.get("user")
                     st.session_state.user_id = login_response.get("user", {}).get("id")
 
-                    st.success(f"✅ Logged in as {login_response.get('user', {}).get('name')}")
+                    st.success(f":material/check_circle: Logged in as {login_response.get('user', {}).get('name')}")
                     st.rerun()
                 else:
                     st.error(f"Login failed: {login_response.get('error')}")
@@ -71,7 +71,7 @@ def render_scan_history():
     if not st.session_state.get("user_id"):
         return
 
-    if st.sidebar.checkbox("📋 Show Scan History"):
+    if st.sidebar.checkbox(":material/assignment: Show Scan History"):
         api_client = get_api_client()
         history = api_client.get_scan_history(limit=10)
 
