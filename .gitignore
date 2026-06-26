@@ -8,3 +8,10 @@ temp_*/
 __pycache__/
 .env
 .auth_session.json
+test_groq.py
+test_openai.py
+test_st.py
+.coverage
+debug_env.txt
+results/
+security_datasets/
