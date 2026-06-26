@@ -61,6 +61,20 @@ async def submit_scan(
 
     return scan
 
+@router.get("/history", response_model=List[ScanResponse])
+async def get_scan_history(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = 50
+):
+    """Get user's scan history."""
+
+    scans = db.query(Scan).filter(
+        Scan.user_id == user.id
+    ).order_by(Scan.created_at.desc()).limit(limit).all()
+
+    return scans
+
 @router.get("/{scan_id}", response_model=ScanResponse)
 async def get_scan(
     scan_id: str,
@@ -78,20 +92,6 @@ async def get_scan(
         raise HTTPException(status_code=404, detail="Scan not found")
 
     return scan
-
-@router.get("/history", response_model=List[ScanResponse])
-async def get_scan_history(
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    limit: int = 50
-):
-    """Get user's scan history."""
-
-    scans = db.query(Scan).filter(
-        Scan.user_id == user.id
-    ).order_by(Scan.created_at.desc()).limit(limit).all()
-
-    return scans
 
 @router.patch("/{scan_id}", response_model=ScanResponse)
 async def update_scan(

@@ -12,7 +12,6 @@ import subprocess
 import time
 import socket
 
-@st.cache_resource
 def start_backend():
     def is_port_in_use(port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -20,8 +19,9 @@ def start_backend():
 
     if not is_port_in_use(8000):
         print("Starting FastAPI backend in the background...")
-        # Start uvicorn without blocking
-        subprocess.Popen(["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"])
+        # Start uvicorn using the same virtual environment Python interpreter
+        import sys
+        subprocess.Popen([sys.executable, "-m", "uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"])
         # Give it a moment to boot
         for _ in range(15):
             if is_port_in_use(8000):
@@ -529,7 +529,7 @@ def render_dashboard_fragment():
     try:
         stats = api_client.get_summary_stats()
         is_mock = False
-        if not stats or stats.get("total_scans", 0) == 0:
+        if stats is None or (isinstance(stats, dict) and "error" in stats):
             is_mock = True
     except Exception:
         is_mock = True
@@ -649,6 +649,58 @@ def render_dashboard_fragment():
                 <div class="chip-subtitle">FastAPI Production Node</div>
             </div>
         """, unsafe_allow_html=True)
+
+    # 4. DETAILED THREAT RECORDS TABLE
+    if not is_mock:
+        st.markdown("---")
+        st.markdown("#### 📋 Detected Vulnerability Records (Real-Time)")
+        
+        try:
+            scans = api_client.get_scan_history(limit=50)
+            if scans and not (isinstance(scans, dict) and "error" in scans):
+                records = []
+                for scan in scans:
+                    res = api_client.get_results(scan.get("id"))
+                    if isinstance(res, dict) and not "error" in res:
+                        sem_res = res.get("semgrep_json", {})
+                        if isinstance(sem_res, dict):
+                            findings = sem_res.get("results", [])
+                            for f in findings:
+                                severity = f.get("severity", "unknown").upper()
+                                # Mapping severity to emoji/badge
+                                if severity in ["ERROR", "CRITICAL"]:
+                                    sev_emoji = "🔴 CRITICAL"
+                                elif severity in ["WARNING", "HIGH"]:
+                                    sev_emoji = "🟡 WARNING"
+                                else:
+                                    sev_emoji = "🔵 INFO"
+                                    
+                                records.append({
+                                    "Project Name": scan.get("project_name", "Unknown"),
+                                    "Vulnerability": f.get("check_id", "Unknown"),
+                                    "Severity": sev_emoji,
+                                    "File Path": f.get("path", "Unknown"),
+                                    "Line": f.get("start", {}).get("line", "N/A"),
+                                    "Description": f.get("extra", {}).get("message", "No description"),
+                                    "Detected At": scan.get("created_at", "")[:19].replace("T", " ")
+                                })
+                
+                if records:
+                    df = pd.DataFrame(records)
+                    st.dataframe(
+                        df,
+                        use_container_width=True,
+                        column_config={
+                            "Severity": st.column_config.TextColumn("Severity", width="medium"),
+                            "Description": st.column_config.TextColumn("Description", width="large")
+                        }
+                    )
+                else:
+                    st.info("🎉 No active vulnerability records detected in your scans.")
+            else:
+                st.info("No scan history found.")
+        except Exception as e:
+            st.error(f"Error loading threat records: {str(e)}")
 
 def main():
     """Main Application Router."""

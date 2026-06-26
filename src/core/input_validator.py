@@ -97,12 +97,11 @@ class InputValidator:
                 f"Filename exceeds maximum length of {InputValidator.MAX_FILENAME_LENGTH}"
             )
 
-        # Remove path components
-        filename = os.path.basename(filename)
+        # Check for path traversal or path separators first
+        if '..' in filename or '/' in filename or '\\' in filename:
+            raise ValidationError("Filename contains invalid path components or traversal")
 
-        # Check for path traversal
-        if '..' in filename:
-            raise ValidationError("Filename contains invalid path traversal")
+        filename = os.path.basename(filename)
 
         # Remove special characters except . and -
         clean_filename = re.sub(r'[^\w\-.]', '', filename)

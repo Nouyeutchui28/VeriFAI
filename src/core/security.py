@@ -381,74 +381,74 @@ def _build_unified_diff(original_text, patched_text, patch_path):
     return diff_text if diff_text.endswith("\n") else (diff_text + "\n" if diff_text else "")
 
 
-    def _fallback_patch_from_findings():
-        """
-        Heuristic fallback that produces simple unified-diff patches for common patterns
-        when the LLM is not available or returns no patch. Handles SQL f-string queries,
-        simple os.system command-injection, and insecure pickle loads.
-        """
-        import re
+def _fallback_patch_from_findings(semgrep_results: dict, code_snippet: str, file_path: str):
+    """
+    Heuristic fallback that produces simple unified-diff patches for common patterns
+    when the LLM is not available or returns no patch. Handles SQL f-string queries,
+    simple os.system command-injection, and insecure pickle loads.
+    """
+    import re
 
-        findings = semgrep_results.get("results", []) if isinstance(semgrep_results, dict) else []
-        combined_text = " ".join(
-            f"{finding.get('check_id', '')} {finding.get('extra', {}).get('message', '')}"
-            for finding in findings
-        ).lower()
+    findings = semgrep_results.get("results", []) if isinstance(semgrep_results, dict) else []
+    combined_text = " ".join(
+        f"{finding.get('check_id', '')} {finding.get('extra', {}).get('message', '')}"
+        for finding in findings
+    ).lower()
 
-        patched_text = code_snippet
-        changed = False
+    patched_text = code_snippet
+    changed = False
 
-        # SQL f-string -> parameterized query
-        if any(keyword in combined_text for keyword in ["sql injection", "formatted sql query", "raw query", "execute-raw-query"]):
-            try:
-                # Match patterns like: query = f"SELECT ... {var} ..."
-                sql_pattern = re.compile(r"(?P<indent>\s*)(?P<var_name>\w+)\s*=\s*f\"(?P<query>[^\"]*\{(?P<param>\w+)\}[^\"]*)\"\s*\n(?P=indent)return\s+db\.execute\((?P=var_name)\)\.?fetchall\(\)")
-                m = sql_pattern.search(patched_text)
-                if m:
-                    indent = m.group("indent")
-                    param = m.group("param")
-                    query_template = m.group("query").replace(f"{{{param}}}", "?")
-                    # Replace with parameterized call
-                    new_block = f'{indent}query = "{query_template}"\n{indent}return db.execute(query, ({param},)).fetchall()'
-                    patched_text = patched_text.replace(m.group(0), new_block, 1)
+    # SQL f-string -> parameterized query
+    if any(keyword in combined_text for keyword in ["sql injection", "formatted sql query", "raw query", "execute-raw-query"]):
+        try:
+            # Match patterns like: query = f"SELECT ... {var} ..."
+            sql_pattern = re.compile(r"(?P<indent>\s*)(?P<var_name>\w+)\s*=\s*f\"(?P<query>[^\"]*\{(?P<param>\w+)\}[^\"]*)\"\s*\n(?P=indent)return\s+db\.execute\((?P=var_name)\)\.?fetchall\(\)")
+            m = sql_pattern.search(patched_text)
+            if m:
+                indent = m.group("indent")
+                param = m.group("param")
+                query_template = m.group("query").replace(f"{{{param}}}", "?")
+                # Replace with parameterized call
+                new_block = f'{indent}query = "{query_template}"\n{indent}return db.execute(query, ({param},)).fetchall()'
+                patched_text = patched_text.replace(m.group(0), new_block, 1)
+                changed = True
+        except Exception:
+            pass
+
+    # os.system/f-string -> subprocess.run safer usage
+    if any(keyword in combined_text for keyword in ["command injection", "os.system", "shell command"]):
+        try:
+            cmd_pattern = re.compile(r"os\.system\(\s*f?[\"'](?P<cmd>.*?\{(?P<var>\w+)\}.*?)[\"']\s*\)")
+            m = cmd_pattern.search(patched_text)
+            if m:
+                var = m.group("var")
+                # Ensure subprocess is imported
+                if "import subprocess" not in patched_text:
+                    patched_text = "import subprocess\n" + patched_text
+                # Build a safer subprocess.run replacement using list form
+                new_line = f"subprocess.run([\"sh\", \"-c\", str({var})], check=True)"
+                patched_text = patched_text.replace(m.group(0), new_line, 1)
+                changed = True
+        except Exception:
+            pass
+
+    # insecure pickle.loads -> add comment recommending safe deserialization
+    if "pickle.loads" in patched_text or "pickle.load" in patched_text:
+        # If we detect direct deserialization, add a comment above the line
+        try:
+            lines = patched_text.splitlines(keepends=True)
+            for i, ln in enumerate(lines):
+                if "pickle.loads" in ln or "pickle.load" in ln:
+                    lines[i] = "# WARNING: insecure deserialization - validate or avoid untrusted pickle data\n" + lines[i]
                     changed = True
-            except Exception:
-                pass
+            patched_text = "".join(lines)
+        except Exception:
+            pass
 
-        # os.system/f-string -> subprocess.run safer usage
-        if any(keyword in combined_text for keyword in ["command injection", "os.system", "shell command"]):
-            try:
-                cmd_pattern = re.compile(r"os\.system\(\s*f?[\"'](?P<cmd>.*?\{(?P<var>\w+)\}.*?)[\"']\s*\)")
-                m = cmd_pattern.search(patched_text)
-                if m:
-                    var = m.group("var")
-                    # Ensure subprocess is imported
-                    if "import subprocess" not in patched_text:
-                        patched_text = "import subprocess\n" + patched_text
-                    # Build a safer subprocess.run replacement using list form
-                    new_line = f"subprocess.run([\"sh\", \"-c\", str({var})], check=True)"
-                    patched_text = patched_text.replace(m.group(0), new_line, 1)
-                    changed = True
-            except Exception:
-                pass
+    if changed and patched_text != code_snippet:
+        return _build_unified_diff(code_snippet, patched_text, file_path)
 
-        # insecure pickle.loads -> add comment recommending safe deserialization
-        if "pickle.loads" in patched_text or "pickle.load" in patched_text:
-            # If we detect direct deserialization, add a comment above the line
-            try:
-                lines = patched_text.splitlines(keepends=True)
-                for i, ln in enumerate(lines):
-                    if "pickle.loads" in ln or "pickle.load" in ln:
-                        lines[i] = "# WARNING: insecure deserialization - validate or avoid untrusted pickle data\n" + lines[i]
-                        changed = True
-                patched_text = "".join(lines)
-            except Exception:
-                pass
-
-        if changed and patched_text != code_snippet:
-            return _build_unified_diff(code_snippet, patched_text, file_path)
-
-        return ""
+    return ""
 
     prompt = ChatPromptTemplate.from_messages([
         (
@@ -618,41 +618,96 @@ def generate_patch_suggestions(semgrep_results, code_snippet, llm=None, file_pat
     Generate security patches based on scanner results and expert AI analysis.
     Redacts PII/Secrets.
     """
-    safe_code = scrub_sensitive_data(code_snippet)
-    safe_semgrep = sanitize_semgrep_for_llm(semgrep_results)
+    if not os.getenv("GROQ_API_KEY"):
+        return _fallback_patch_from_findings(semgrep_results, code_snippet, file_path)
 
-    result = generate_remediation_patch(safe_semgrep, safe_code, file_path)
-    if "error" in result:
-        return ""
+    safe_code = scrub_sensitive_data(code_snippet)
     
-    fixed_code = result.get("patched_code", "")
-    patch = _build_unified_diff(safe_code, fixed_code, file_path) if fixed_code else ""
+    # 1. Run LLM security analysis first to identify vulnerability details
+    analysis = run_llm_analysis(code_snippet, semgrep_results, 0.2, "Qwen")
+    
+    # 2. Call security chat in background to request code remediation
+    chat_prompt = (
+        "Please rewrite the entire code to remediate all the security vulnerabilities identified in the scan results. "
+        "Return the complete, fully secured, and compilable code. The output MUST contain the entire file content "
+        "so it can be used to patch the file, and the code MUST be wrapped in a ```python ... ``` code block."
+    )
+    chat_response = security_chat(safe_code, analysis, [], chat_prompt)
+    
+    # 3. Extract the code block from the chatbot response safely
+    import re
+    fixed_code = ""
+    if "❌" in chat_response or "chat error" in chat_response.lower() or "api error" in chat_response.lower():
+        fixed_code = ""
+    else:
+        pattern = r"```(?:python)?\s*(.*?)\s*```"
+        matches = re.findall(pattern, chat_response, re.DOTALL)
+        if matches:
+            for m in matches:
+                if m.strip():
+                    fixed_code = m.strip()
+                    break
+        else:
+            if "def " in chat_response or "import " in chat_response or "class " in chat_response:
+                fixed_code = chat_response.strip()
+            else:
+                fixed_code = ""
+        
+    patch = _build_unified_diff(safe_code, fixed_code, file_path) if (fixed_code and fixed_code != safe_code) else ""
     return patch or "No patch suggestions."
 
 def unified_security_scan(semgrep_results, code_snippet, llm=None, file_path="main.py", context_files=None):
     """
-    Fast, single-pass expert security analysis and remediation using Hugging Face Qwen.
+    Unified security analysis and chatbot-driven remediation.
     """
+    if not os.getenv("GROQ_API_KEY"):
+        analysis = "Local heuristic analysis (offline mode)."
+        patch = _fallback_patch_from_findings(semgrep_results, code_snippet, file_path)
+        return analysis, patch
+
     code_hash = compute_code_hash(f"{code_snippet}:{file_path}")
     cached = get_cached_scan(code_hash)
     if cached and cached.get("llm_analysis"):
         return cached["llm_analysis"], cached.get("patch", "No patch suggestions.")
 
     safe_code = scrub_sensitive_data(code_snippet)
-    safe_semgrep = sanitize_semgrep_for_llm(semgrep_results)
-    safe_context_files = {k: scrub_sensitive_data(v) for k, v in context_files.items()} if context_files else None
-
-    result = unified_scan_and_patch(safe_semgrep, safe_code, file_path, safe_context_files)
-    if "error" in result:
-        return result["error"], "No patch suggestions."
-        
-    analysis = result.get("analysis", "")
-    fixed_code = result.get("fixed_code", "")
     
+    # 1. Run LLM security analysis first
+    analysis = run_llm_analysis(code_snippet, semgrep_results, 0.2, "Qwen")
+    if "error" in analysis or "❌" in analysis:
+        # Do not block the scan if AI fails. Provide Semgrep findings list.
+        pass
+        
+    # 2. Query the security chatbot in the background for remediations
+    chat_prompt = (
+        "Please rewrite the entire code to remediate all the security vulnerabilities identified in the scan results. "
+        "Return the complete, fully secured, and compilable code. The output MUST contain the entire file content "
+        "so it can be used to patch the file, and the code MUST be wrapped in a ```python ... ``` code block."
+    )
+    chat_response = security_chat(safe_code, analysis, [], chat_prompt)
+    
+    # 3. Extract the code block from the chatbot response safely
+    import re
+    fixed_code = ""
+    if "❌" in chat_response or "chat error" in chat_response.lower() or "api error" in chat_response.lower():
+        fixed_code = ""
+    else:
+        pattern = r"```(?:python)?\s*(.*?)\s*```"
+        matches = re.findall(pattern, chat_response, re.DOTALL)
+        if matches:
+            for m in matches:
+                if m.strip():
+                    fixed_code = m.strip()
+                    break
+        else:
+            if "def " in chat_response or "import " in chat_response or "class " in chat_response:
+                fixed_code = chat_response.strip()
+            else:
+                fixed_code = ""
+        
     verification_msg = ""
     if fixed_code and fixed_code != safe_code:
         import tempfile
-        import os
         with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as tmp:
             tmp.write(fixed_code)
             tmp_path = tmp.name
@@ -668,7 +723,7 @@ def unified_security_scan(semgrep_results, code_snippet, llm=None, file_path="ma
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
     
-    patch = _build_unified_diff(safe_code, fixed_code, file_path) if fixed_code else ""
+    patch = _build_unified_diff(safe_code, fixed_code, file_path) if (fixed_code and fixed_code != safe_code) else ""
     if patch and verification_msg:
         patch += verification_msg
         

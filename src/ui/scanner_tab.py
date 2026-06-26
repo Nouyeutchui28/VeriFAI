@@ -640,33 +640,38 @@ def unsafe_pickle():
         semgrep_results = results.get("semgrep_results", {})
         findings = semgrep_results.get("results", [])
 
-        if llm_analysis:
-            st.markdown('<div class="analysis-container">', unsafe_allow_html=True)
-            st.markdown('<div class="analysis-title">🛡️ AI Security Analysis</div>', unsafe_allow_html=True)
-            st.markdown(llm_analysis)
-            st.markdown('</div>', unsafe_allow_html=True)
+        # Structured tabs as requested: "AI Analysis" and "Patch Review"
+        tab_analysis, tab_patch = st.tabs(["AI Analysis", "Patch Review"])
 
-        if findings:
-            st.markdown(f'<div class="scanner-panel" style="margin-top: 1.5rem;"><div class="scanner-panel-header"><div class="scanner-panel-title">findings</div><div class="scanner-file-label" style="color: #ff4060;">{len(findings)} vulnerabilities identified</div></div></div>', unsafe_allow_html=True)
-            for finding in findings:
-                severity = (finding.get("severity", "low") or "low").lower()
-                label = finding.get("check_id", "Unknown Issue")
-                message = finding.get("extra", {}).get("message", "No description available.")
-                location = f"{finding.get('path', 'unknown')} · line {finding.get('start', {}).get('line', 'N/A')} · CWE {finding.get('extra', {}).get('cwe', 'N/A')}"
-                title = label
-                description = message
-                badge_style = {
-                    'high': 'severity-high',
-                    'medium': 'severity-med',
-                    'low': 'severity-low',
-                }.get(severity, 'severity-low')
+        with tab_analysis:
+            if llm_analysis:
+                st.markdown('<div class="analysis-container">', unsafe_allow_html=True)
+                st.markdown('<div class="analysis-title">🛡️ AI Security Analysis</div>', unsafe_allow_html=True)
+                st.markdown(llm_analysis)
+                st.markdown('</div>', unsafe_allow_html=True)
+            else:
+                st.info("No AI Security Analysis available.")
 
-                with st.expander(f"{title} — {location}"):
-                    lines_code = finding.get("extra", {}).get("lines", "")
-                    st.markdown(
-                        f'<div class="finding-card"><div class="finding-header"><div><p class="finding-title">{title}</p><p style="margin:0; color:#8b909e;">{location}</p></div><span class="severity-badge {badge_style}">{severity.upper()}</span></div><p style="color:#cbd5e1; margin-bottom:0.85rem;">{description}</p><pre style="color:#e8eaf0; background: #0f172a; border-radius: 10px; padding: 0.85rem; overflow:auto;">{lines_code}</pre></div>',
-                        unsafe_allow_html=True,
+        with tab_patch:
+            patch_text = results.get("patch_suggestions", "")
+            code_content = results.get("code_content", "")
+            patch_target = _resolve_patch_target(results.get("target_path", ""))
+
+            if patch_text and patch_text.strip() and patch_text != "No patch suggestions.":
+                patched_code = extract_patched_code(code_content, patch_text) if code_content else None
+                try:
+                    render_patch_review_panel(
+                        patch_text=patch_text,
+                        original_code=code_content,
+                        patched_code=patched_code,
+                        target_path=results.get("target_path", ""), # Original path for zipping
+                        patch_root=patch_target,                  # Root dir for applying patches
+                        patch_file_path=results.get("patch_file_path", ""),
                     )
-    return None
-
+                except Exception as e:
+                    st.error(f"⚠️ Unable to render interactive patch review panel: {e}")
+                    with st.expander("View Raw Patch Diff"):
+                        st.code(patch_text, language="diff")
+            else:
+                st.info("No patch suggestions available for the last scan.")
     return None

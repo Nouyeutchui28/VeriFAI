@@ -141,7 +141,7 @@ class TestZIPBombProtection:
             with pytest.raises(ZIPBombError) as exc_info:
                 _validate_zip_safety(outer_zip_path)
             
-            assert "nested ZIP" in str(exc_info.value).lower()
+            assert "nested zip" in str(exc_info.value).lower()
         
         finally:
             for path in [inner_zip_path, outer_zip_path]:
@@ -345,6 +345,7 @@ class TestCache:
     def test_cache_ttl_expiration(self):
         """Test that expired items are not returned."""
         # Create cache with very short TTL
+        from src.core.cache import LRUCache
         short_cache = LRUCache(capacity=3, default_ttl=1)
         short_cache.set("key1", "value1")
         

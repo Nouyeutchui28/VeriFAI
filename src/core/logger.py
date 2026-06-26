@@ -9,7 +9,7 @@ import os
 import re
 from pathlib import Path
 from datetime import datetime
-from typing import Any, str
+from typing import Any
 
 
 # ============================================================================

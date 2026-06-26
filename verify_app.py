@@ -10,6 +10,13 @@ import json
 import tempfile
 from pathlib import Path
 
+# Load environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 sys.path.insert(0, str(Path(__file__).parent))
 
 def print_header(title):
@@ -211,16 +218,15 @@ def test_database_connection():
     print_header("9. Database Connection")
 
     try:
-        from src.db.connection import get_db_connection
+        from src.db.connection import get_session
 
-        conn = get_db_connection()
-        if conn is not None:
-            print(f"  ✓ Database connection established")
-            conn.close()
-            return True
-        else:
-            print(f"  ⚠ Database connection returned None")
-            return False
+        with get_session() as session:
+            if session is not None:
+                print(f"  ✓ Database connection established")
+                return True
+            else:
+                print(f"  ⚠ Database connection returned None")
+                return False
     except ImportError:
         print(f"  ⚠ Database module not fully implemented")
         return False
@@ -267,9 +273,16 @@ def test_requirements():
     ]
 
     success_count = 0
+    import_map = {
+        "python_dotenv": "dotenv",
+        "pyyaml": "yaml",
+        "PyGithub": "github",
+        "fpdf2": "fpdf",
+    }
     for pkg in requirements:
+        import_name = import_map.get(pkg, pkg)
         try:
-            __import__(pkg.replace("-", "_").replace("_groq", "").replace("_dotenv", ""))
+            __import__(import_name)
             print(f"  ✓ {pkg}")
             success_count += 1
         except ImportError:
