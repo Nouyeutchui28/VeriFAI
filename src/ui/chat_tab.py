@@ -64,6 +64,20 @@ def render_chat_tab():
     security_analysis = analysis_context.get("llm_analysis", "")
     severity_count = analysis_context.get("severity_count", {})
 
+    if st.session_state.get("patch_generated_from_chat"):
+        st.success(":material/celebration: A new security patch was generated from your chat request and loaded into the **Patch Review** section!")
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            if st.button("Go to Patch Review", key="go_to_patch_review_from_notif", type="primary"):
+                st.session_state.patch_generated_from_chat = False
+                AppState.set_page(":material/build: Patch Review")
+                st.rerun()
+        with col2:
+            if st.button("Dismiss", key="dismiss_patch_notif"):
+                st.session_state.patch_generated_from_chat = False
+                st.rerun()
+        st.markdown("---")
+
     left, right = st.columns([3, 1])
 
     with left:
@@ -85,16 +99,60 @@ def render_chat_tab():
             st.session_state.chat_history.append({"role": "user", "content": user_query})
             with st.spinner("Analyzing vulnerabilities..."):
                 llm = None
-                if llm or True: # Force True since logic is handled in security_chat wrapper now
-                    response = security_chat(
-                        code_context,
-                        security_analysis,
-                        st.session_state.chat_history[:-1],
-                        user_query,
-                        llm,
-                    )
-                else:
-                    response = ":material/error: Could not initialize the LLM. Check your API configuration."
+                response = security_chat(
+                    code_context,
+                    security_analysis,
+                    st.session_state.chat_history[:-1],
+                    user_query,
+                    llm,
+                )
+                
+                # Check if the response contains code remediation to extract
+                import re
+                from src.core.security import _build_unified_diff
+                
+                # 1. Try extracting ```diff block
+                extracted_patch = None
+                diff_pattern = r"```diff\s*(.*?)\s*```"
+                diff_matches = re.findall(diff_pattern, response, re.DOTALL)
+                if diff_matches:
+                    for dm in diff_matches:
+                        if dm.strip():
+                            extracted_patch = dm.strip()
+                            break
+                            
+                # 2. Try extracting ```python block and compute diff against original code
+                if not extracted_patch and code_context:
+                    py_pattern = r"```(?:python)?\s*(.*?)\s*```"
+                    py_matches = re.findall(py_pattern, response, re.DOTALL)
+                    if py_matches:
+                        for pm in py_matches:
+                            pm_stripped = pm.strip()
+                            if len(pm_stripped) > 50 and pm_stripped != code_context:
+                                diff = _build_unified_diff(code_context, pm_stripped, st.session_state.get("last_scan_file") or "main.py")
+                                if diff:
+                                    extracted_patch = diff
+                                    break
+                
+                if extracted_patch:
+                    # Initialize analysis_results if not present
+                    if "analysis_results" not in st.session_state or not st.session_state.analysis_results:
+                        st.session_state.analysis_results = {
+                            "code_content": code_context,
+                            "target_path": st.session_state.get("last_scan_file") or "main.py",
+                            "patch_file_path": st.session_state.get("last_scan_file") or "main.py",
+                            "result_id": "chat_generated",
+                            "llm_analysis": security_analysis or "Generated from chat",
+                            "semgrep_results": {"results": []}
+                        }
+                    else:
+                        st.session_state.analysis_results["code_content"] = st.session_state.analysis_results.get("code_content") or code_context
+                        st.session_state.analysis_results["target_path"] = st.session_state.analysis_results.get("target_path") or (st.session_state.get("last_scan_file") or "main.py")
+                        st.session_state.analysis_results["patch_file_path"] = st.session_state.analysis_results.get("patch_file_path") or (st.session_state.get("last_scan_file") or "main.py")
+                    
+                    st.session_state.analysis_results["patch_suggestions"] = extracted_patch
+                    st.session_state.patch_generated_from_chat = True
+                
                 st.session_state.chat_history.append({"role": "assistant", "content": response})
             st.session_state.prefill_prompt = ""
             st.rerun()

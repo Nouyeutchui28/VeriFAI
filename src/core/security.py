@@ -585,7 +585,18 @@ def security_chat(code_snippet, llm_analysis, chat_history, query, llm=None):
     safe_analysis = scrub_sensitive_data(llm_analysis)
     
     messages = [
-        SystemMessage(content=f"You are an expert security analyst. Context Code: {safe_code}\nContext Analysis: {safe_analysis}")
+        SystemMessage(content=(
+            "You are an expert security analyst. Analyze the code for vulnerabilities and assist the user.\n\n"
+            f"Context Code:\n{safe_code}\n\n"
+            f"Context Analysis:\n{safe_analysis}\n\n"
+            "INSTRUCTION FOR REMEDIATIONS:\n"
+            "If the user asks you to fix, remediate, secure, or patch the code (or any specific vulnerability), "
+            "you MUST output a detailed explanation of the fix. In addition, you must include a code block containing "
+            "either:\n"
+            "1. The entire secured/fixed file content enclosed in a ```python ... ``` code block, OR\n"
+            "2. A unified diff format enclosed in a ```diff ... ``` code block.\n"
+            "This code block will be parsed automatically to update the Patch Review panel for the user."
+        ))
     ]
     
     for msg in chat_history:
