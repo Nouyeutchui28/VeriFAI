@@ -1,10 +1,9 @@
-"""
-Unified settings management for VeriFAI LLM with professional UI.
-"""
+import os
 import streamlit as st
 from ..utils.state import AppState
 from .components import render_settings_group, render_info_banner, render_action_button
 from .ui_error_handler import handle_ui_success, handle_ui_info
+from ..core.llm import list_local_ollama_models
 
 def render_settings_tab():
     """Render the unified settings page with professional styling."""
@@ -22,25 +21,64 @@ def render_settings_tab():
     with tab1:
         st.markdown("### :material/psychology: Language Model Settings")
         render_info_banner(
-            "Configure LLM parameters for security analysis intelligence",
+            "Configure LLM parameters for security analysis intelligence (Local AI or Cloud API)",
             type="info"
         )
 
         col1, col2 = st.columns(2)
 
         with col1:
-            render_settings_group("Model Selection", ":material/smart_toy:", "Groq API Active")
-            model_options = [
-                "qwen-2.5-coder-32b"
-            ]
-            selected_model = st.selectbox(
-                "Intelligence Model",
-                model_options,
-                index=0, 
-                key="settings_model_select",
-                label_visibility="collapsed"
+            render_settings_group("AI Provider Selection", ":material/smart_toy:", "Choose Backend")
+            provider_choice = st.radio(
+                "AI Backend Provider",
+                options=["Cloud API (OpenRouter - Fast & High Accuracy)", "Local AI (Ollama - Offline)"],
+                index=0 if os.getenv("LLM_PROVIDER", "cloud").lower() == "cloud" else 1,
+                key="settings_provider_radio"
             )
-            st.info(":material/rocket_launch: Groq API Complete: Using qwen-2.5-coder-32b.")
+            
+            selected_provider_key = "cloud" if "Cloud" in provider_choice else "ollama"
+            os.environ["LLM_PROVIDER"] = selected_provider_key
+            AppState.set("llm_provider", selected_provider_key)
+
+            local_models = list_local_ollama_models()
+            
+            if selected_provider_key == "ollama":
+                if local_models:
+                    default_idx = 0
+                    preferred_local = ["qwen2.5-coder:1.5b", "qwen2.5-coder:3b", "llama3.2:latest", "phi3:latest", "qwen2.5:0.5b", "codellama:latest"]
+                    for pref in preferred_local:
+                        if pref in local_models:
+                            default_idx = local_models.index(pref)
+                            break
+                        
+                    sel_local = st.selectbox(
+                        "Local Ollama Model",
+                        local_models,
+                        index=default_idx,
+                        key="settings_ollama_model_select"
+                    )
+                    os.environ["OLLAMA_MODEL"] = sel_local
+                    AppState.set("ollama_model", sel_local)
+                    st.success(f":material/check_circle: Local AI Active: **{sel_local}** (Ollama)")
+                else:
+                    st.warning(":material/warning: Ollama not detected on localhost:11434. Make sure Ollama service is running.")
+            else:
+                model_options = [
+                    "qwen/qwen-2.5-coder-32b-instruct",
+                    "openai/gpt-4o-mini",
+                    "meta-llama/llama-3.3-70b-instruct"
+                ]
+                current_gmodel = os.getenv("GROQ_MODEL", "qwen/qwen-2.5-coder-32b-instruct")
+                default_cloud_idx = model_options.index(current_gmodel) if current_gmodel in model_options else 0
+                selected_model = st.selectbox(
+                    "Cloud Intelligence Model",
+                    model_options,
+                    index=default_cloud_idx, 
+                    key="settings_model_select"
+                )
+                os.environ["GROQ_MODEL"] = selected_model
+                st.info(f":material/rocket_launch: Cloud API Active: Using **{selected_model}**.")
+
 
         with col2:
             render_settings_group("Response Variation", ":material/casino:", "Creativity vs Consistency")

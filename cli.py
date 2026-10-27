@@ -34,10 +34,8 @@ def run_semgrep(target_path):
         semgrep_cmd, 
         "--json", 
         "--output", output_path, 
-        "--config=auto", 
         "--config=p/security-audit", 
         "--config=p/r2c-security-audit",
-        "--metrics=off",
         target_path
     ]
     
@@ -61,13 +59,20 @@ def run_semgrep(target_path):
     return {"results": []}
 
 def main():
-    print("[DEBUG] CLI Main started")
     parser = argparse.ArgumentParser(description="VeriFAI LLM CLI - AI-Powered Security Scanner")
-    parser.add_argument("target", help="File or directory to scan")
-    parser.add_argument("--model", default="phi3", help="Local Ollama model to use")
+    parser.add_argument("target", nargs="?", default=None, help="File or directory to scan (leave empty for Interactive Mode)")
+    parser.add_argument("-i", "--interactive", action="store_true", help="Launch the rich interactive terminal shell")
+    parser.add_argument("--model", default="nvidia/llama-3.1-nemotron-70b-instruct", help="AI Model to use (via Meterless Nightshift)")
+    parser.add_argument("--agentic", action="store_true", default=True, help="Enable 3-Agent Collaborative Remediation (Planner -> Specialist -> Critic)")
     parser.add_argument("--apply", action="store_true", help="Automatically apply and VERIFY generated patches")
     parser.add_argument("--fail-under", type=int, default=80, help="Security score threshold (0-100). Fails if below.")
     args = parser.parse_args()
+
+    # Launch Interactive Terminal Mode if requested or if no target argument provided
+    if args.interactive or not args.target:
+        from src.cli.interactive import start_interactive_cli
+        start_interactive_cli()
+        return
 
     target_path = args.target
 
@@ -113,8 +118,58 @@ def main():
         # If directory, just pass the semgrep results and note it's a directory
         code_content = f"Target is a directory: {target_path}. See Semgrep results."
 
-    # 2. AI Analysis
-    print(f"[*] Initializing AI Deep Reasoning (Groq model)...")
+    # 2. AI Analysis & Multi-Agent Cooperative Remediation
+    if args.agentic and findings_count > 0:
+        print("\n" + "="*65)
+        print("🤖 INITIATING 3-AGENT COLLABORATIVE REMEDIATION (APPROACH)")
+        print("Sponsors: Zetaris Data Fabric | Meterless Nightshift (NVIDIA) | H-MEM")
+        print("="*65)
+        from src.core.multi_agent.orchestrator import MultiAgentOrchestrator
+        orchestrator = MultiAgentOrchestrator(max_critique_rounds=3)
+        pipeline = orchestrator.run_remediation_pipeline(target_path, findings)
+
+        last_patch = None
+        for event in pipeline:
+            evt_type = event.get("type")
+            if evt_type == "agent_action":
+                iter_str = f" [Attempt #{event['iteration']}]" if "iteration" in event else ""
+                print(f"\n👉 [{event.get('agent')}]{iter_str}: {event.get('message')}")
+            elif evt_type == "plan_ready":
+                print("\n📋 Remediation Plan:")
+                for t in event["plan"]["execution_order"]:
+                    print(f"   • [{t['severity']}] {t['check_id']} (OWASP: {t['owasp_category']})")
+            elif evt_type == "patch_generated":
+                print(f"📝 Patch Drafted ({event.get('provider')} - {event.get('model')})")
+                last_patch = event.get("diff")
+            elif evt_type == "critique_result":
+                badge = "✅ APPROVED" if event.get("approved") else "❌ REVISION REQUIRED"
+                print(f"🧐 Critic Decision: {badge} (Score: {event.get('score')}/100)")
+                print(f"   Reasoning: {event.get('critique')}")
+            elif evt_type == "self_healing_trigger":
+                print(f"   {event.get('message')}")
+            elif evt_type == "workflow_complete":
+                summary = event.get("summary")
+                print("\n" + "="*65)
+                print(f"🎯 Multi-Agent Remediation Complete: {summary['remediated_tasks']}/{summary['total_tasks']} Vulnerabilities Neutralized")
+                print(f"🧠 H-MEM Memory Episodes Recorded: {summary['hmem_state']['total_episodes']}")
+                print("💾 Audit Telemetry Synced to Zetaris Data Fabric")
+                print("="*65 + "\n")
+
+        if args.apply and last_patch and os.path.isfile(target_path):
+            print("\n[*] Applying verified patch to disk...")
+            target_dir = os.path.dirname(os.path.abspath(target_path))
+            apply_res = apply_patch(last_patch, target_dir)
+            if apply_res.get("applied"):
+                print("[+] Verified patch applied cleanly to target.")
+
+        if score < args.fail_under:
+            print(f"\n[❌] SECURITY GATE FAILED: Initial Score {score} is below threshold {args.fail_under}.")
+            sys.exit(1)
+        else:
+            print(f"\n[✅] SECURITY GATE PASSED: Score {score} meets threshold {args.fail_under}.")
+        sys.exit(0)
+
+    print(f"[*] Initializing AI Deep Reasoning (Meterless Nightshift / NVIDIA)...")
 
 
     print("[*] Performing Deep-Trace Analysis...")

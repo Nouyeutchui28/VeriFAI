@@ -15,3 +15,8 @@ test_st.py
 debug_env.txt
 results/
 security_datasets/
+
+# ADTC 2026 Requirements
+*.gguf
+model/
+

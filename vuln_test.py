@@ -1,8 +1,10 @@
-import os
 
-def run_command(user_input):
-    # DANGEROUS: Command Injection vulnerability
-    os.system("echo " + user_input)
+import sqlite3
 
-if __name__ == "__main__":
-    run_command("hello")
+def login(username, password):
+    # SQL Injection vulnerability
+    query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"
+    conn = sqlite3.connect('app.db')
+    cursor = conn.cursor()
+    cursor.execute(query)
+    return cursor.fetchall()

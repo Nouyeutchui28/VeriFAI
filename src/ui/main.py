@@ -14,23 +14,28 @@ import socket
 
 def start_backend():
     def is_port_in_use(port):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            return s.connect_ex(('localhost', port)) == 0
+        for host in ('127.0.0.1', 'localhost'):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.5)
+                    if s.connect_ex((host, port)) == 0:
+                        return True
+            except Exception:
+                pass
+        return False
 
     if not is_port_in_use(8000):
         print("Starting FastAPI backend in the background...")
-        # Start uvicorn using the same virtual environment Python interpreter
         import sys
         subprocess.Popen([sys.executable, "-m", "uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"])
-        # Give it a moment to boot
-        for _ in range(15):
+        for _ in range(5):
             if is_port_in_use(8000):
                 break
-            time.sleep(1)
+            time.sleep(0.5)
 
-start_backend()
 # Import UI Components & Utilities
 from src.ui.scanner_tab import render_scanner_tab
+from src.ui.agentic_tab import render_agentic_tab
 from src.ui.chat_tab import render_chat_tab
 from src.ui.rules_tab import render_rules_tab
 from src.ui.github_tab import render_github_tab
@@ -45,14 +50,9 @@ from src.utils.state import AppState
 from src.utils.report_gen import generate_pdf_report
 
 NAV_ITEMS = [
-    ("Dashboard", ":material/dashboard: Dashboard"),
-    ("Scanner", ":material/analytics: Security Scanner"),
+    ("Security Scanner", ":material/analytics: Security Scanner"),
     ("Patch Review", ":material/build: Patch Review"),
-    ("History", ":material/history: Scan History"),
-    ("Intelligence Chat", ":material/chat: Intelligence Chat"),
-    ("Repositories", ":material/folder: Project Repositories"),
-    ("Custom Rules", ":material/assignment: Custom Rules"),
-    ("Help", ":material/menu_book: Help"),
+    ("Scan History", ":material/history: Scan History"),
     ("Settings", ":material/settings: Settings"),
 ]
 
@@ -344,179 +344,82 @@ def inject_layout_css():
 
 def render_sidebar_navigation(current_page):
     """Render the left sidebar navigation and status panel."""
-    rules_count = st.session_state.get("rules_loaded_count", 0)
-
-    # 1. BRANDING
     with st.sidebar:
         st.markdown(
             """
-            <div style="text-align: center; margin-top: 1.5rem; margin-bottom: 1.5rem;">
-                <div style="font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 800; color: var(--accent);">VeriFAI LLM</div>
-                <div style="color: var(--text2); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Oxbiy Intelligence</div>
+            <div style="text-align: center; margin-top: 1rem; margin-bottom: 1.5rem;">
+                <div style="font-family: 'Syne', sans-serif; font-size: 1.35rem; font-weight: 800; color: var(--accent);">🛡️ VeriFAI LLM</div>
+                <div style="color: var(--text2); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.25rem;">Code Security Scanner</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-    # 2. SCAN SECTION
-    st.sidebar.markdown('<div class="sidebar-section">SCAN</div>', unsafe_allow_html=True)
-    for label, page_value in NAV_ITEMS[:3]:
-        is_active = current_page == page_value
-        if st.sidebar.button(
-            label, 
-            key=f"nav_{label}", 
-            use_container_width=True, 
-            type="primary" if is_active else "secondary"
-        ):
-            AppState.set_page(page_value)
-            st.rerun()
+        st.markdown('<div class="sidebar-section">NAVIGATION</div>', unsafe_allow_html=True)
+        for label, page_value in NAV_ITEMS:
+            is_active = current_page == page_value
+            if st.button(
+                label, 
+                key=f"nav_{label}", 
+                use_container_width=True, 
+                type="primary" if is_active else "secondary"
+            ):
+                AppState.set_page(page_value)
+                st.rerun()
 
-    # 3. ANALYSIS SECTION
-    st.sidebar.markdown('<div class="sidebar-section">ANALYSIS</div>', unsafe_allow_html=True)
-    for label, page_value in NAV_ITEMS[3:6]:
-        is_active = current_page == page_value
-        display_label = label
-        if label == "Intelligence Chat":
-            display_label = f":material/chat: Chat [Live]"
-            
-        if st.sidebar.button(
-            display_label, 
-            key=f"nav_{label}", 
-            use_container_width=True, 
-            type="primary" if is_active else "secondary"
-        ):
-            AppState.set_page(page_value)
-            st.rerun()
+        active_provider = os.getenv("LLM_PROVIDER", "ollama").lower()
+        if active_provider == "ollama":
+            active_model_name = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
+            engine_label = "Local AI (Ollama)"
+        else:
+            active_model_name = os.getenv("GROQ_MODEL", "qwen/qwen-2.5-coder-32b-instruct")
+            engine_label = "Cloud AI (Active)"
 
-    # 4. MANAGE SECTION
-    st.sidebar.markdown('<div class="sidebar-section">MANAGE</div>', unsafe_allow_html=True)
-    for label, page_value in NAV_ITEMS[6:]:
-        is_active = current_page == page_value
-        display_label = label
-        if label == "Custom Rules":
-            display_label = f":material/assignment: Rules ({rules_count})"
-            
-        if st.sidebar.button(
-            display_label, 
-            key=f"nav_{label}", 
-            use_container_width=True, 
-            type="primary" if is_active else "secondary"
-        ):
-            AppState.set_page(page_value)
-            st.rerun()
-
-    st.sidebar.markdown(
-        f"""
-        <div class="model-chip">
-            <div style="font-weight: 700; color: var(--text); font-size: 0.85rem;">
-                <span class="live-dot"></span> qwen-2.5-coder-32b
+        st.markdown(
+            f"""
+            <div class="model-chip" style="margin-top: 2rem;">
+                <div style="font-weight: 700; color: var(--text); font-size: 0.85rem;">
+                    <span class="live-dot"></span> {active_model_name}
+                </div>
+                <div style="color: var(--text3); font-size: 0.75rem; margin-top: 0.25rem;">
+                    Engine: {engine_label}
+                </div>
             </div>
-            <div style="color: var(--text3); font-size: 0.75rem; margin-top: 0.25rem;">
-                Engine: Groq AI (Ultra)
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+            """,
+            unsafe_allow_html=True,
+        )
 
-    if st.sidebar.button("Edit", key="sidebar_edit", use_container_width=True):
-        AppState.set_page(":material/settings: Settings")
+        user_info = AppState.get("user_info")
+        if user_info and isinstance(user_info, dict):
+            user_name = user_info.get("name") or user_info.get("email") or "Analyst"
+            st.markdown(
+                f"""
+                <div style="margin-top: 1.5rem; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--border);">
+                    <div style="color: var(--text2); font-size: 0.75rem; text-transform: uppercase;">Session</div>
+                    <div style="color: var(--text); font-size: 0.85rem; font-weight: 600; margin-top: 0.2rem; overflow: hidden; text-overflow: ellipsis;">{user_name}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 
 def render_top_bar(current_page):
-    """Render the top bar for every page with status and action buttons."""
-    page_title = next((label for label, value in NAV_ITEMS if value == current_page), "VeriFAI LLM")
+    """Render the clean top bar for every page with status and clear branding."""
+    page_title = next((label for label, value in NAV_ITEMS if value == current_page), "Security Scanner")
     semgrep_ready = not st.session_state.get("scan_error", False)
     status_class = "ready" if semgrep_ready else "error"
+    status_text = "Semgrep Ready" if semgrep_ready else "Scanner Offline"
 
     st.markdown('<div class="topbar">', unsafe_allow_html=True)
     with st.container():
-        # Layout: Menu Toggle (small), Title (large), padding, Status, Export, Run Scan
-        cols = st.columns([0.3, 3, 0.5, 1, 1, 1])
-        
-        # Pure HTML/JS Menu Toggle
-        with cols[0]:
-            import streamlit.components.v1 as components
-            components.html("""
-                <button onclick="
-                    var parentDoc = window.parent.document;
-                    var clicked = false;
-                    
-                    // Helper to click if found
-                    function tryClick(selector) {
-                        if (clicked) return;
-                        var btn = parentDoc.querySelector(selector);
-                        if (btn) {
-                            btn.click();
-                            clicked = true;
-                        }
-                    }
-
-                    // Try all known Streamlit sidebar toggle selectors
-                    tryClick('button[data-testid=\\'stSidebarCollapsedControl\\']');
-                    tryClick('button[data-testid=\\'stSidebarCollapseButton\\']');
-                    tryClick('button[aria-label=\\'Collapse sidebar\\']');
-                    tryClick('button[aria-label=\\'Expand sidebar\\']');
-                    tryClick('[data-testid=\\'collapsedControl\\']');
-                    
-                    if (!clicked) {
-                        // Fallback: search all buttons for the SVG icon characteristic
-                        var buttons = Array.from(parentDoc.querySelectorAll('button'));
-                        for (var i=0; i<buttons.length; i++) {
-                            var b = buttons[i];
-                            var svg = b.querySelector('svg');
-                            if (svg && (svg.getAttribute('data-testid') === 'stSidebarCollapseButton' || 
-                                        svg.getAttribute('data-testid') === 'stSidebarCollapsedControl')) {
-                                b.click();
-                                clicked = true;
-                                break;
-                            }
-                        }
-                    }
-                " style="
-                    background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #00e5a0; 
-                    cursor: pointer; font-size: 1.5rem; border-radius: 6px; width: 40px; height: 40px;
-                    display: flex; align-items: center; justify-content: center; transition: all 0.2s;
-                ">☰</button>
-                <style>button:hover { background: rgba(0, 229, 160, 0.1) !important; color: #00e5a0 !important; border-color: #00e5a0 !important; }</style>
-            """, height=45)
-
-        cols[1].markdown(f'<div class="page-header" style="margin-top: 5px;">{page_title}</div>', unsafe_allow_html=True)
-        cols[2].markdown("&nbsp;")
-        
-        with cols[3]:
-            st.markdown(f'<div class="status-pill" style="margin-top: 5px;"><span class="status-dot {status_class}"></span> semgrep</div>', unsafe_allow_html=True)
-
-        has_results = bool(st.session_state.get("analysis_results"))
-        if current_page == ":material/analytics: Security Scanner":
-            if has_results:
-                try:
-                    result = st.session_state.analysis_results
-                    pdf_bytes = generate_pdf_report(
-                        result.get("code_content", ""),
-                        result.get("llm_analysis", ""),
-                        result.get("semgrep_results", {}),
-                    )
-                    cols[3].download_button(
-                        "Export Report",
-                        pdf_bytes,
-                        file_name="security_audit.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                    )
-                except Exception:
-                    cols[3].button("Export Report", disabled=True, use_container_width=True)
-            else:
-                cols[3].button("Export Report", disabled=True, use_container_width=True)
-        else:
-            cols[3].button("Export Report", disabled=True, use_container_width=True)
-
-        if current_page == ":material/analytics: Security Scanner":
-            if cols[4].button("Run Scan", key="top_run_scan", use_container_width=True, type="primary"):
-                st.session_state.run_scan_request = True
-                st.rerun()
-        else:
-            cols[4].button("Run Scan", disabled=True, use_container_width=True)
+        col_title, col_status = st.columns([3, 1])
+        with col_title:
+            st.markdown(f'<div class="page-header" style="margin-top: 5px;">{page_title}</div>', unsafe_allow_html=True)
+        with col_status:
+            st.markdown(
+                f'<div style="text-align: right;"><div class="status-pill" style="margin-top: 5px;"><span class="status-dot {status_class}"></span> {status_text}</div></div>',
+                unsafe_allow_html=True
+            )
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -636,10 +539,18 @@ def render_dashboard_fragment():
             </div>
         """, unsafe_allow_html=True)
     with s2:
+        active_prov = os.getenv("LLM_PROVIDER", "ollama").lower()
+        if active_prov == "ollama":
+            active_m = os.getenv("OLLAMA_MODEL", "secure-patch-model:latest")
+            chip_sub = f"Local Ollama ({active_m})"
+        else:
+            active_m = os.getenv("GROQ_MODEL", "qwen-2.5-coder-32b")
+            chip_sub = f"Cloud Groq ({active_m})"
+
         st.markdown(f"""
             <div class="model-chip" style="margin-top:0;">
                 <div class="chip-title"><span class="status-dot ready"></span> AI Engine</div>
-                <div class="chip-subtitle">Groq Engine (qwen-2.5-coder-32b)</div>
+                <div class="chip-subtitle">{chip_sub}</div>
             </div>
         """, unsafe_allow_html=True)
     with s3:
@@ -704,6 +615,7 @@ def render_dashboard_fragment():
 
 def main():
     """Main Application Router."""
+    start_backend()
     configure_app()
 
     if not AppState.get("authenticated"):
@@ -738,20 +650,20 @@ def main():
         return
 
     current_page = AppState.get("current_page")
+    valid_pages = [val for _, val in NAV_ITEMS]
+    if current_page not in valid_pages:
+        current_page = ":material/analytics: Security Scanner"
+        AppState.set_page(current_page)
+
     render_sidebar_navigation(current_page)
     render_top_bar(current_page)
 
-    if current_page == ":material/dashboard: Dashboard":
-        st.markdown('<div class="dashboard-title">Security Command Center</div>', unsafe_allow_html=True)
-        st.markdown('<div class="dashboard-subtitle">Real-time threat intelligence and infrastructure health</div>', unsafe_allow_html=True)
-        render_dashboard_fragment()
-
-    elif current_page == ":material/analytics: Security Scanner":
+    if current_page == ":material/analytics: Security Scanner":
         render_scanner_tab()
 
     elif current_page == ":material/build: Patch Review":
         st.markdown('<div class="dashboard-title">Security Patch Review</div>', unsafe_allow_html=True)
-        st.markdown('<div class="dashboard-subtitle">Review and apply AI-generated security fixes</div>', unsafe_allow_html=True)
+        st.markdown('<div class="dashboard-subtitle">Review and apply AI-generated security fixes for uploaded code</div>', unsafe_allow_html=True)
         
         # Check if we have results to show
         results = st.session_state.get("analysis_results")
@@ -775,42 +687,22 @@ def main():
                         patch_file_path=results.get("patch_file_path", ""),
                     )
                 except Exception as e:
-                    st.error(f":material/warning: Unable to render interactive patch review panel. The patch diff may be malformed or incompatible with this file. Please review the patch text manually.")
+                    st.error(f":material/warning: Unable to render interactive patch review panel: {e}")
                     with st.expander("View Raw Patch Diff"):
                         st.code(patch_text, language="diff")
             else:
                 st.info("No patch suggestions available for the last scan.")
         else:
-            st.info("Run a scan first to see patch suggestions here.")
+            st.info("Please upload and scan code in the Security Scanner tab first to view patch suggestions.")
 
     elif current_page == ":material/history: Scan History":
         st.markdown('<div class="dashboard-title">Scan History Explorer</div>', unsafe_allow_html=True)
-        st.markdown('<div class="dashboard-subtitle">Review previous security analysis results</div>', unsafe_allow_html=True)
+        st.markdown('<div class="dashboard-subtitle">Review previous security analysis results for uploaded code</div>', unsafe_allow_html=True)
         render_history_tab()
-
-    elif current_page == ":material/assignment: Custom Rules":
-        st.markdown('<div class="dashboard-title">Custom Security Rules</div>', unsafe_allow_html=True)
-        st.markdown('<div class="dashboard-subtitle">Create and manage custom detection rules</div>', unsafe_allow_html=True)
-        render_rules_tab()
-
-    elif current_page == ":material/folder: Project Repositories":
-        st.markdown('<div class="dashboard-title">Project Repositories</div>', unsafe_allow_html=True)
-        st.markdown('<div class="dashboard-subtitle">Scan GitHub repositories for security vulnerabilities</div>', unsafe_allow_html=True)
-        render_github_tab(metrics_enabled=True, llm_temperature=st.session_state.get('llm_temperature', 0.2), model_selection=st.session_state.get('model_selection', 'secure-patch-model'))
-
-    elif current_page == ":material/chat: Intelligence Chat":
-        st.markdown('<div class="dashboard-title">Security Intelligence Chat</div>', unsafe_allow_html=True)
-        st.markdown('<div class="dashboard-subtitle">Ask questions and get security insights</div>', unsafe_allow_html=True)
-        render_chat_tab()
-
-    elif current_page == ":material/menu_book: Help":
-        st.markdown('<div class="dashboard-title">Help & Documentation</div>', unsafe_allow_html=True)
-        st.markdown('<div class="dashboard-subtitle">Learn how to use VeriFAI LLM</div>', unsafe_allow_html=True)
-        render_help_tab()
 
     elif current_page == ":material/settings: Settings":
         st.markdown('<div class="dashboard-title">Settings & Preferences</div>', unsafe_allow_html=True)
-        st.markdown('<div class="dashboard-subtitle">Configure application behavior and preferences</div>', unsafe_allow_html=True)
+        st.markdown('<div class="dashboard-subtitle">Configure AI model and scanner preferences</div>', unsafe_allow_html=True)
         render_settings_tab()
 
     st.markdown('<div style="text-align: center; color: #8b9bb4; font-size: 0.75rem; padding: 2rem 0; border-top: 1px solid #1d2b3f; margin-top: 4rem; text-transform: uppercase; letter-spacing: 0.5px;">VeriFAI LLM Security Scanner | Pro Edition 2026</div>', unsafe_allow_html=True)

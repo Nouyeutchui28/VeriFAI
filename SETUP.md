@@ -11,9 +11,10 @@ Before you begin, ensure you have the following installed:
 *   **Git**
 *   **pip** (Python package manager)
 
-### 🔑 Required API Keys
-1.  **Groq API Key:** Create a free account at [console.groq.com](https://console.groq.com/) and generate an API key at [API Keys](https://console.groq.com/keys). This is required to access the **qwen-2.5-coder-32b** model.
-2.  **GitHub Token (Optional):** Required only if you plan to scan your private repositories. Generate a Classic PAT at [GitHub Settings](https://github.com/settings/tokens).
+### 🔑 LLM Engine Options
+1.  **Local AI (Offline / Zero Data Leakage - Recommended):** Install and start [Ollama](https://ollama.com). VeriFAI LLM automatically detects local models (`secure-patch-model:latest`, `codellama:latest`, `llama3.2`, etc.) via `http://localhost:11434`.
+2.  **Groq API / OpenRouter (Cloud):** Create an account at [console.groq.com](https://console.groq.com/) and add `GROQ_API_KEY` to `.env`.
+3.  **GitHub Token (Optional):** Required only if you plan to scan your private repositories. Generate a Classic PAT at [GitHub Settings](https://github.com/settings/tokens).
 
 ---
 

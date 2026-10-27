@@ -1,62 +1,105 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/Nouyeutchui28/VeriFAI/main/assets/logo.png" width="200" alt="VeriFAI LLM Logo">
   
-  <h1>🛡️ VeriFAI LLM</h1>
+  <h1>🛡️ VeriFAI Agentic PatchOps</h1>
   <p align="center">
-    <strong>Enterprise-Grade Security Analysis powered by qwen-2.5-coder-32b & Semgrep</strong>
+    <strong>Autonomous 3-Agent Security Remediation Loop with Dynamic Peer Critique & Self-Healing</strong>
   </p>
 
   <p align="center">
-    <img src="https://img.shields.io/badge/Model-qwen--2.5--coder--32b-blueviolet?style=for-the-badge" alt="Model">
-    <img src="https://img.shields.io/badge/Analysis-Semgrep-2962FF?style=for-the-badge" alt="Semgrep">
-    <img src="https://img.shields.io/badge/Interface-Streamlit-FF4B4B?style=for-the-badge" alt="Streamlit">
-    <img src="https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge" alt="FastAPI">
+    <img src="https://img.shields.io/badge/Competition-Open%20Agent%20Hackathon%202026-00E5A0?style=for-the-badge" alt="Hackathon">
+    <img src="https://img.shields.io/badge/AI%20Provider-Meterless%20Nightshift-76B900?style=for-the-badge" alt="Meterless Nightshift">
+    <img src="https://img.shields.io/badge/Models-NVIDIA%20Nemotron-76B900?style=for-the-badge" alt="NVIDIA">
+    <img src="https://img.shields.io/badge/Engine-Meterless%20H--MEM-00B4D8?style=for-the-badge" alt="H-MEM">
+    <img src="https://img.shields.io/badge/Data%20Layer-Zetaris%20Data%20Fabric-9D4EDD?style=for-the-badge" alt="Zetaris">
+    <img src="https://img.shields.io/badge/Static%20Engine-Semgrep%20AST-2962FF?style=for-the-badge" alt="Semgrep">
   </p>
 </div>
 
-<hr style="height: 2px; background: linear-gradient(to right, #1a237e, #0d47a1);">
+<hr style="height: 2px; background: linear-gradient(to right, #00e5a0, #76b900, #00b4d8, #9d4edd);">
 
-VeriFAI LLM is an advanced security analysis platform that fuses the surgical precision of **Semgrep's** static analysis with the deep reasoning capabilities of the **qwen-2.5-coder-32b** model. Designed for developers and security researchers, it provides a comprehensive suite for detecting, analyzing, and auto-remediating vulnerabilities in modern codebases.
-
----
-
-## ✨ Key Features
-
-### 🧠 Ultra-Intelligence Engine
-Powered by **qwen-2.5-coder-32b**, VeriFAI provides deep-trace security analysis that understands complex logic, data flow, and architectural vulnerabilities that traditional tools miss.
-
-### 📊 Security Command Center (Dashboard)
-Real-time oversight of your security posture.
-*   **Analysis Velocity:** Track your scanning frequency over time.
-*   **Threat Distribution:** Visual breakdown of vulnerabilities by severity (Critical, High, Medium, Low).
-*   **Risk Index:** A weighted score that measures the overall health of your projects.
-
-### 🛠️ Interactive Remediation (Patch Review)
-Don't just find bugs—fix them.
-*   **AI-Generated Patches:** Get high-quality, secure-by-default code fixes.
-*   **Side-by-Side Diff:** Review changes before applying them.
-*   **Project-Wide Export:** Apply multiple fixes and export a secured ZIP of your entire project.
-
-### 📦 Agentic Multi-File Scanning
-VeriFAI can clone GitHub repositories or process ZIP archives, tracing dependencies across multiple files to find cross-component vulnerabilities.
+**VeriFAI Agentic PatchOps** is an autonomous multi-agent vulnerability remediation system submitted to the **Open Agent Hackathon 2026**. Rather than relying on simple linear prompt wrappers, VeriFAI implements a dynamic 3-agent cooperative loop where agents **plan**, **craft**, **critique each other's code**, and **self-heal from errors** before generating verified, production-ready security patches.
 
 ---
 
-## 🚀 Quick Start
+## 🏆 Mandatory Sponsor Technology Alignment
 
-### 1. Prerequisites
-*   Python 3.10+
-*   [Groq API Key](https://console.groq.com/keys) (Required for the Intelligence Engine)
+| Sponsor Requirement | VeriFAI Implementation | Key Files |
+| :--- | :--- | :--- |
+| **Primary AI Provider** | **Meterless Nightshift** — Dispatches prompt pipelines and receives streaming completions. | [`src/core/nightshift_client.py`](src/core/nightshift_client.py) |
+| **Foundation Models** | **NVIDIA Models** (e.g. `nvidia/llama-3.1-nemotron-70b-instruct`) executed through Nightshift. | [`src/core/nightshift_client.py`](src/core/nightshift_client.py) |
+| **Meterless Engine** | **H-MEM (Hierarchical Memory)** — 3-tier memory engine (Tier 1: Working AST findings; Tier 2: Episodic Critique history; Tier 3: Semantic Security invariants). | [`src/core/hmem_engine.py`](src/core/hmem_engine.py) |
+| **Data Layer** | **Zetaris Data Fabric & Virtual Data Lake** — Virtualized data queries across code assets, CVE advisory catalogs (`python_advisory_index.json`), and audit telemetry. | [`src/core/zetaris_connector.py`](src/core/zetaris_connector.py) |
 
-### 2. Installation
+---
+
+## 🤖 3-Agent Collaborative Architecture
+
+```mermaid
+flowchart TD
+    TargetCode["📁 Code Repository / Target File"] --> Planner["📋 Agent 1: Planner Agent\n(Triage, OWASP Scoping, AST Ranking)"]
+    
+    subgraph HMEM ["🧠 Meterless H-MEM Engine (Hierarchical Memory)"]
+        T1["Tier 1: Working Context"]
+        T2["Tier 2: Episodic Critique Log"]
+        T3["Tier 3: Semantic Invariants"]
+    end
+    
+    Planner -->|Initializes Working Memory| T1
+    Planner -->|Remediation Task Package| Specialist["📝 Agent 2: Specialist Agent\n(Nightshift + NVIDIA Nemotron)"]
+    
+    Zetaris["🌐 Zetaris Data Fabric\n(Virtualized Code & CVE Lake)"] -->|Code Asset + Advisory Context| Specialist
+    T2 -->|Prior Rejection Feedback| Specialist
+    T3 -->|Verified Security Templates| Specialist
+    
+    Specialist -->|Draft Candidate Patch| Evaluator["🧐 Agent 3: Evaluator Agent (Critic)\n(AST Syntax Check & Regression Test)"]
+    
+    Evaluator -->|AST Failure / Residual Flaw| Feedback{"Critic Approval?"}
+    Feedback -- "❌ REJECTED" -->|Push Detailed Critique to Memory| T2
+    T2 -->|Trigger Self-Healing Loop| Specialist
+    
+    Feedback -- "✅ APPROVED" --> CleanPatch["🛡️ Verified Clean Security Patch"]
+    CleanPatch -->|Promote Invariant| T3
+    CleanPatch -->|Sync Audit Telemetry| Zetaris
+```
+
+### The Three Agents:
+1. **`PlannerAgent` (Triage & Scoping)**:
+   - Ingests AST scan findings, maps CWEs to OWASP Top 10 categories, ranks remediation priority, and configures H-MEM Tier-1 Working Memory.
+2. **`SpecialistAgent` (Patch Synthesis)**:
+   - Queries **Zetaris Data Fabric** for surrounding repo context and vulnerability benchmarks, reads critique history from **H-MEM**, and synthesizes an exact patch using **Meterless Nightshift (NVIDIA Nemotron)**.
+3. **`EvaluatorAgent` (Critic & Verifier)**:
+   - Validates AST syntax, tests that the vulnerability is neutralized, and checks for regressions. If a flaw remains, it generates actionable critique, stores the episode in **H-MEM**, and prompts the Specialist Agent to self-heal. Once clean, it syncs audit telemetry to **Zetaris**.
+
+---
+
+## ⚡ Quick Start for Judges (Runs in < 2 Minutes)
+
+### 1. Environment Setup
 ```bash
 # Clone the repository
 git clone https://github.com/Nouyeutchui28/VeriFAI.git
 cd VeriFAI
 
-# Install dependencies
-pip install -r requirements.txt
+# Copy configuration (includes dual-mode resilient execution)
+cp .env.example .env
 ```
+
+### 2. Run the 3-Agent Cooperative CLI Demo
+Demonstrates the full autonomous triage, Nightshift NVIDIA patch generation, Critic evaluation, and Zetaris telemetry in your terminal:
+```bash
+python cli.py sample_misconfig_test.py --agentic
+```
+Or test the standalone multi-agent pipeline:
+```bash
+python test_agentic_pipeline.py
+```
+
+### 3. Launch the Interactive Dashboard
+```bash
+streamlit run app.py
+```
+Navigate to **🤖 Agentic PatchOps** in the sidebar to visualize the real-time agent debate stream, live H-MEM episode count, and Zetaris data telemetry!
 
 ### 3. Configuration
 Create a `.env` file from the example:

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 # Add project root to path
-sys.path.insert(0, "/home/bruns/Pictures/VeriFAI LLM")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.core.llm import initialize_llm
 from src.core.security import analyze_security

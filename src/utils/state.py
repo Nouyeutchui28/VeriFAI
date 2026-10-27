@@ -12,7 +12,7 @@ class AppState:
         "user_info": None,
         "user_id": None,
         "access_token": None,
-        "current_page": ":material/dashboard: Dashboard",
+        "current_page": ":material/analytics: Security Scanner",
         "prev_page": None,
         "chat_history": [],
         "analysis_results": None,
@@ -41,19 +41,19 @@ class AppState:
             if key not in st.session_state:
                 st.session_state[key] = default_value
                 
-        # Persist login across refreshes - DISABLED to force login page on start
-        # session_file = ".auth_session.json"
-        # if os.path.exists(session_file) and not st.session_state.authenticated:
-        #     try:
-        #         with open(session_file, "r") as f:
-        #             data = json.load(f)
-        #             st.session_state.authenticated = data.get("authenticated", False)
-        #             st.session_state.user_info = data.get("user_info")
-        #             st.session_state.access_token = data.get("access_token")
-        #             st.session_state.user_id = data.get("user_id")
-        #             st.session_state.legal_agreed = data.get("legal_agreed", False)
-        #     except Exception:
-        #         pass
+        # Persist login across refreshes
+        session_file = ".auth_session.json"
+        if os.path.exists(session_file) and not st.session_state.authenticated:
+            try:
+                with open(session_file, "r") as f:
+                    data = json.load(f)
+                    st.session_state.authenticated = data.get("authenticated", False)
+                    st.session_state.user_info = data.get("user_info")
+                    st.session_state.access_token = data.get("access_token")
+                    st.session_state.user_id = data.get("user_id")
+                    st.session_state.legal_agreed = data.get("legal_agreed", False)
+            except Exception:
+                pass
 
     @staticmethod
     def logout() -> None:

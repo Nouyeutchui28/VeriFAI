@@ -55,7 +55,7 @@ class LocalLLM:
         self._ensure()
         # transformers pipeline expects max_length total tokens; approximate by adding prompt length
         try:
-            out = self._gen(prompt, max_length=max_tokens, do_sample=(temperature > 0.0), temperature=temperature, **kwargs)
+            out = self._gen(prompt, max_new_tokens=max_tokens, do_sample=(temperature > 0.0), temperature=max(0.01, temperature), **kwargs)
             # pipeline returns a list of dicts with 'generated_text'
             text = out[0]["generated_text"] if isinstance(out, list) and len(out) > 0 else str(out)
             return {"text": text}

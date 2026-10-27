@@ -47,4 +47,4 @@ done
 
 # 2. Start Streamlit Frontend
 echo "🎨 Starting Frontend on port $FRONTEND_PORT..."
-streamlit run app.py --server.port $FRONTEND_PORT
+python -m streamlit run app.py --server.port $FRONTEND_PORT

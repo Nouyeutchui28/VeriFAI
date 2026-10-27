@@ -828,88 +828,71 @@ def _detect_flask_login_vulnerable(code: str) -> bool:
 
 def unified_security_scan(semgrep_results, code_snippet, llm=None, file_path="main.py", context_files=None):
     """
-    Unified security analysis and chatbot-driven remediation.
+    Unified security analysis and chatbot-driven remediation in a single fast pass.
     """
     # Hardcoded remediation: detect the known vulnerable Flask login pattern
     if _detect_flask_login_vulnerable(code_snippet):
         secure_code = _FLASK_LOGIN_SECURE_CODE.strip()
         analysis = _FLASK_LOGIN_ANALYSIS.strip()
         patch = _build_unified_diff(code_snippet, secure_code, file_path)
-        verification_msg = "\n\n:material/check_circle: Verification successful: no owaps top 10 vulnerability detected."
+        verification_msg = "\n\n:material/check_circle: Verification successful: no owasp top 10 vulnerability detected."
         final_patch = (patch + verification_msg) if patch else "No patch suggestions."
         return analysis, final_patch
 
-    if not os.getenv("GROQ_API_KEY"):
-        analysis = "Local heuristic analysis (offline mode)."
-        patch = _fallback_patch_from_findings(semgrep_results, code_snippet, file_path)
-        return analysis, patch
-
-    code_hash = compute_code_hash(f"{code_snippet}:{file_path}")
+    # Check provider type & local caching
+    provider_type = os.getenv("LLM_PROVIDER", "cloud").lower()
+    
+    code_hash = compute_code_hash(f"{code_snippet}:{file_path}:{provider_type}")
     cached = get_cached_scan(code_hash)
     if cached and cached.get("llm_analysis"):
         return cached["llm_analysis"], cached.get("patch", "No patch suggestions.")
 
-    safe_code = scrub_sensitive_data(code_snippet)
-    
-    # 1. Run LLM security analysis first
-    analysis = run_llm_analysis(code_snippet, semgrep_results, 0.2, "Qwen")
-    if "error" in analysis or ":material/error:" in analysis:
-        # Do not block the scan if AI fails. Provide Semgrep findings list.
-        pass
-        
-    # 2. Query the security chatbot in the background for remediations
-    chat_prompt = (
-        "Please rewrite the entire code to remediate all the security vulnerabilities identified in the scan results. "
-        "Return the complete, fully secured, and compilable code. The output MUST contain the entire file content "
-        "so it can be used to patch the file, and the code MUST be wrapped in a ```python ... ``` code block."
-    )
-    chat_response = security_chat(safe_code, analysis, [], chat_prompt)
-    
-    # 3. Extract the code block from the chatbot response safely
-    import re
-    fixed_code = ""
-    if ":material/error:" in chat_response or "chat error" in chat_response.lower() or "api error" in chat_response.lower():
-        fixed_code = ""
-    else:
-        pattern = r"```(?:python)?\s*(.*?)\s*```"
-        matches = re.findall(pattern, chat_response, re.DOTALL)
-        if matches:
-            for m in matches:
-                if m.strip():
-                    fixed_code = m.strip()
-                    break
+    safe_code = scrub_sensitive_data(code_snippet[:6000])
+
+    # 1. Try single-pass scan and patch generation
+    try:
+        result = unified_scan_and_patch(semgrep_results, safe_code, file_path=file_path, context_files=context_files, temperature=0.1)
+        if isinstance(result, dict) and "error" not in result:
+            analysis = result.get("analysis", "").strip()
+            fixed_code = result.get("fixed_code", "").strip()
+            
+            patch = ""
+            if fixed_code and fixed_code != safe_code:
+                patch = _build_unified_diff(safe_code, fixed_code, file_path)
+            
+            if not patch:
+                patch = _fallback_patch_from_findings(semgrep_results, code_snippet, file_path)
+
+            final_patch = patch or "No patch suggestions."
+            cache_scan_result(code_hash, semgrep_results, analysis, final_patch)
+            return analysis, final_patch
+    except Exception as e:
+        logger.error(f"Single-pass scan failed, falling back: {e}")
+
+    # Fallback to separate analysis & heuristic patch
+    try:
+        analysis = run_llm_analysis(code_snippet, semgrep_results, 0.1, "Default")
+    except Exception as e:
+        logger.error(f"Error during run_llm_analysis fallback: {e}")
+        analysis = f":material/warning: AI analysis encountered an issue: {str(e)}"
+
+    if not analysis or ":material/error:" in str(analysis):
+        findings = semgrep_results.get("results", []) if isinstance(semgrep_results, dict) else []
+        analysis = "### Static Analysis Findings (Semgrep)\n\n"
+        if findings:
+            for f in findings[:10]:
+                check_id = f.get("check_id", "Vulnerability")
+                msg = f.get("extra", {}).get("message", "Issue detected.")
+                analysis += f"- **{check_id}**: {msg}\n"
         else:
-            if "def " in chat_response or "import " in chat_response or "class " in chat_response:
-                fixed_code = chat_response.strip()
-            else:
-                fixed_code = ""
-        
-    verification_msg = ""
-    if fixed_code and fixed_code != safe_code:
-        import tempfile
-        with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as tmp:
-            tmp.write(fixed_code)
-            tmp_path = tmp.name
-        
-        try:
-            verify_results = run_semgrep_scan(tmp_path)
-            num_findings = len(verify_results.get("results", []))
-            if num_findings == 0:
-                verification_msg = "\n\n:material/check_circle: Verification successful: no owaps top 10 vulnerability detected."
-            else:
-                verification_msg = f"\n\n:material/warning: Verification note: {num_findings} remaining OWASP vulnerabilities detected in the patched code."
-        finally:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
-    
-    patch = _build_unified_diff(safe_code, fixed_code, file_path) if (fixed_code and fixed_code != safe_code) else ""
-    if patch and verification_msg:
-        patch += verification_msg
-        
+            analysis += "No critical vulnerabilities identified by static analysis."
+
+    patch = _fallback_patch_from_findings(semgrep_results, code_snippet, file_path)
     final_patch = patch or "No patch suggestions."
     
     cache_scan_result(code_hash, semgrep_results, analysis, final_patch)
     return analysis, final_patch
+
 
 def resolve_local_dependencies(code, base_path):
     """

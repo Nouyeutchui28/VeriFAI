@@ -19,35 +19,46 @@ def _get_scanner_input_state():
         st.session_state.get("scanner_paste_code", ""),
         st.session_state.get("scanner_uploaded_file"),
         st.session_state.get("scanner_zip_file"),
-        st.session_state.get("scanner_github_url", ""),
-        st.session_state.get("scanner_github_repo_path")
     )
 
 
-def _active_input_mode(paste_code, uploaded_file, zip_file, github_repo_path):
-    if github_repo_path:
-        return "GitHub"
-    if zip_file:
+def _has_code_input(paste_code, uploaded_file, zip_file):
+    if uploaded_file is not None:
+        return True
+    if zip_file is not None:
+        return True
+    if paste_code and paste_code.strip():
+        return True
+    return False
+
+
+def _active_input_mode(paste_code, uploaded_file, zip_file):
+    if zip_file is not None:
         return "ZIP"
-    if uploaded_file:
+    if uploaded_file is not None:
         if uploaded_file.name.lower().endswith(".zip"):
             return "ZIP"
         return "Upload"
-    return "Paste"
+    if paste_code and paste_code.strip():
+        return "Paste"
+    return "None"
 
 
-def _format_file_label(mode, uploaded_file, zip_file, github_url, github_repo_path):
+def _format_file_label(mode, uploaded_file, zip_file, paste_code):
     if mode == "Upload" and uploaded_file:
         size = getattr(uploaded_file, 'size', len(uploaded_file.getvalue()))
-        return f"{uploaded_file.name} · {size} bytes"
+        return f"{uploaded_file.name} · {size:,} bytes"
     if mode == "ZIP":
         if zip_file:
-            return f"{zip_file.name} · ZIP archive"
+            size = getattr(zip_file, 'size', len(zip_file.getvalue()))
+            return f"{zip_file.name} · {size:,} bytes (ZIP Archive)"
         if uploaded_file and uploaded_file.name.lower().endswith(".zip"):
-            return f"{uploaded_file.name} · ZIP archive"
-    if mode == "GitHub" and github_repo_path:
-        return f"{os.path.basename(github_repo_path)} · repo"
-    return "Paste input"
+            size = getattr(uploaded_file, 'size', len(uploaded_file.getvalue()))
+            return f"{uploaded_file.name} · {size:,} bytes (ZIP Archive)"
+    if mode == "Paste" and paste_code.strip():
+        lines = len(paste_code.splitlines())
+        return f"Code Snippet · {lines} lines · {len(paste_code):,} chars"
+    return "No code loaded"
 
 
 def _resolve_patch_target(target_path):
@@ -59,7 +70,7 @@ def _resolve_patch_target(target_path):
     return os.path.dirname(target_path) or "."
 
 
-def _resolve_target_path(mode, paste_code, uploaded_file, zip_file, github_repo_path):
+def _resolve_target_path(mode, paste_code, uploaded_file, zip_file):
     if mode == "Paste" and paste_code.strip():
         target_path = save_code_to_temp_file(paste_code)
         return target_path, "pasted_code.py", paste_code, os.path.basename(target_path)
@@ -86,9 +97,6 @@ def _resolve_target_path(mode, paste_code, uploaded_file, zip_file, github_repo_
         target_path = extract_zip(uploaded_file)
         code_content, patch_file_path = extract_primary_code_sample(target_path)
         return target_path, uploaded_file.name, code_content, patch_file_path
-    if mode == "GitHub" and github_repo_path:
-        code_content, patch_file_path = extract_primary_code_sample(github_repo_path)
-        return github_repo_path, os.path.basename(github_repo_path), code_content, patch_file_path
     return None, None, "", ""
 
 
@@ -177,9 +185,9 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
             sem_res = run_semgrep_scan(target_path, True)
             findings = sem_res.get("results", [])
             
-            # Step 2: Parallel AI Analysis & Patching
-            status.update(label=":material/smart_toy: Running Parallel AI Analysis... (Step 2/3)", state="running")
-            progress_placeholder.progress(0.4, text="Initializing Hugging Face engine for concurrent analysis...")
+            # Step 2: Local AI Analysis & Patching
+            status.update(label=":material/smart_toy: Running Local AI Analysis... (Step 2/3)", state="running")
+            progress_placeholder.progress(0.4, text="Initializing Local AI engine for analysis...")
             
             llm = None
 
@@ -198,8 +206,8 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
             if not flagged_files:
                 flagged_files = [patch_file_path or os.path.basename(target_path)]
             
-            # Limit parallel scans to top 10 vulnerable/critical files for speed + resource safety
-            flagged_files = flagged_files[:10]
+            # Limit parallel scans to top 3 vulnerable/critical files for speed + 8GB RAM safety
+            flagged_files = flagged_files[:3]
             
             all_llm_analyses = []
             all_patches = []
@@ -216,7 +224,7 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
                 
                 try:
                     with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
-                        file_code = f.read(8000)
+                        file_code = f.read(4000)
                     
                     # Agentic Feature: Resolve local context dependencies
                     from ..core.security import resolve_local_dependencies
@@ -226,16 +234,16 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
                         for d_rel, d_full in deps:
                             try:
                                 with open(d_full, "r", encoding="utf-8", errors="ignore") as df:
-                                    context_files[d_rel] = df.read(2000)
+                                    context_files[d_rel] = df.read(1500)
                             except: pass
                     
                     return unified_security_scan(sem_res, file_code, llm, file_path=file_rel_path, context_files=context_files)
                 except Exception as e:
-                    logger.error(f"Error in parallel task for {file_rel_path}: {e}")
+                    logger.error(f"Error in task for {file_rel_path}: {e}")
                     return None, None
 
-            # Run analysis in parallel (Max 3 concurrent to be safer for local CPU/Ollama stability)
-            with ThreadPoolExecutor(max_workers=3) as executor:
+            # Run sequentially (max_workers=1) to prevent Ollama GPU/CPU RAM thrashing on 8GB RAM
+            with ThreadPoolExecutor(max_workers=1) as executor:
                 future_to_file = {executor.submit(process_file_task, f): f for f in flagged_files}
                 completed_count = 0
                 for future in as_completed(future_to_file):
@@ -255,6 +263,20 @@ def _execute_scan(target_path, code_content, actual_filename, patch_file_path=""
                         text=f"AI Expert Analysis: {completed_count}/{len(flagged_files)} files..."
                     )
             
+            # Engage MultiAgentOrchestrator (Zetaris Data Fabric + Meterless Nightshift + H-MEM) if patches needed
+            if findings and not all_patches:
+                try:
+                    from ..core.multi_agent.orchestrator import MultiAgentOrchestrator
+                    status.update(label=":material/smart_toy: Running 3-Agent Collaborative Remediation (Zetaris / Nightshift / H-MEM)...", state="running")
+                    orchestrator = MultiAgentOrchestrator(max_critique_rounds=2)
+                    target_to_remediate = target_path if os.path.isfile(target_path) else (os.path.join(target_path, flagged_files[0]) if flagged_files else target_path)
+                    if os.path.exists(target_to_remediate):
+                        for event in orchestrator.run_remediation_pipeline(target_to_remediate, findings):
+                            if event.get("type") == "patch_generated" and event.get("diff"):
+                                all_patches.append(event.get("diff"))
+                except Exception as ex:
+                    logger.warning(f"Multi-agent orchestrator fallback failed: {ex}")
+
             combined_analysis = "\n\n---\n\n".join(all_llm_analyses) or ":material/warning: No vulnerabilities found in AI deep-scan. Review Semgrep results."
             combined_patch = "\n\n".join(all_patches) or "No patch suggestions."
             
@@ -472,130 +494,103 @@ def render_scanner_tab():
         unsafe_allow_html=True,
     )
 
-    if "scanner_github_url" not in st.session_state:
-        st.session_state.scanner_github_url = ""
-    if "scanner_github_repo_path" not in st.session_state:
-        st.session_state.scanner_github_repo_path = None
+    paste_code, uploaded_file, zip_file = _get_scanner_input_state()
+    mode = _active_input_mode(paste_code, uploaded_file, zip_file)
+    has_code = _has_code_input(paste_code, uploaded_file, zip_file)
+    file_label = _format_file_label(mode, uploaded_file, zip_file, paste_code)
 
-    paste_code, uploaded_file, zip_file, github_url, github_repo_path = _get_scanner_input_state()
-    mode = _active_input_mode(paste_code, uploaded_file, zip_file, github_repo_path)
-    file_label = _format_file_label(mode, uploaded_file, zip_file, github_url, github_repo_path)
-
-    # Trigger scan if requested
-    if st.session_state.run_scan_request and not st.session_state.scan_running:
-        target_path, actual_filename, code_content, patch_file_path = _resolve_target_path(mode, paste_code, uploaded_file, zip_file, github_repo_path)
-        if target_path is None:
-            st.error("Please provide code input, upload a file, upload a ZIP, or clone a GitHub repository before scanning.")
+    # Strictly enforce: when no code is uploaded, no scan action can be performed
+    if st.session_state.get("run_scan_request", False) and not st.session_state.get("scan_running", False):
+        if not has_code:
             st.session_state.run_scan_request = False
+            st.warning("⚠️ No code provided. Please upload a file, upload a ZIP archive, or paste code before scanning.")
         else:
-            _execute_scan(target_path, code_content, actual_filename, patch_file_path)
+            target_path, actual_filename, code_content, patch_file_path = _resolve_target_path(mode, paste_code, uploaded_file, zip_file)
+            if target_path is None:
+                st.error("Unable to process uploaded code. Please re-upload your file.")
+                st.session_state.run_scan_request = False
+            else:
+                _execute_scan(target_path, code_content, actual_filename, patch_file_path)
 
     col1, col2 = st.columns([2, 1])
     with col1:
         st.markdown('<div class="scanner-panel">', unsafe_allow_html=True)
         st.markdown(
-            f'<div class="scanner-panel-header"><div class="scanner-panel-title">code input</div><div class="scanner-file-label">{file_label}</div></div>',
+            f'''<div class="scanner-panel-header">
+                <div class="scanner-panel-title">Uploaded Code Input</div>
+                <div class="scanner-file-label" style="color: {'#00e5a0' if has_code else '#8b909e'}; font-weight: {'600' if has_code else '400'};">
+                    {'● ' if has_code else ''}{file_label}
+                </div>
+            </div>''',
             unsafe_allow_html=True,
         )
 
-        tabs = st.tabs(["Paste", "Upload", "ZIP", "GitHub"])
+        tabs = st.tabs([":material/upload_file: Single File", ":material/folder_zip: ZIP Archive", ":material/edit_note: Paste Code"])
 
         with tabs[0]:
-            st.text_area(
-                "Paste code here",
-                height=200,
-                key="scanner_paste_code",
-                placeholder="Paste code here...",
-                label_visibility="collapsed"
+            st.file_uploader(
+                "Upload a code file",
+                type=["py", "txt", "js", "ts", "json", "sh"],
+                key="scanner_uploaded_file",
+                help="Upload a single Python script or source file to scan."
             )
-            st.markdown("**Sample vulnerable code to test:**")
-            sample_code = '''import sqlite3
-
-def search_user(user_id):
-    """VULNERABLE: SQL Injection"""
-    db = sqlite3.connect("users.db")
-    query = f"SELECT * FROM users WHERE id = {user_id}"  # Direct string concat
-    return db.execute(query).fetchall()
-
-def process_data(user_input):
-    """VULNERABLE: Command Injection"""
-    import os
-    os.system(f"echo {user_input}")  # Command injection risk
-
-def unsafe_pickle():
-    """VULNERABLE: Insecure Deserialization"""
-    import pickle
-    data = pickle.loads(user_data)  # Unsafe deserialize
-    return data
-'''
-            if st.button(":material/assignment: Load Sample Vulnerable Code", key="sample_code_btn"):
-                st.session_state.scanner_paste_code = sample_code
-                st.success("Sample code loaded! Click 'Run Scan' to analyze.")
-                st.rerun()
 
         with tabs[1]:
-            uploaded_file = st.file_uploader("Upload a file", key="scanner_uploaded_file")
+            st.file_uploader(
+                "Upload a ZIP archive",
+                type=["zip"],
+                key="scanner_zip_file",
+                help="Upload a ZIP archive containing your project codebase."
+            )
 
         with tabs[2]:
-            zip_file = st.file_uploader("Upload ZIP archive", type=["zip"], key="scanner_zip_file")
-
-        with tabs[3]:
-            github_url = st.text_input(
-                "GitHub repository URL",
-                value=github_url,
-                key="scanner_github_url",
-                placeholder="https://github.com/user/repo"
+            st.text_area(
+                "Paste Python code snippet here",
+                height=210,
+                key="scanner_paste_code",
+                placeholder="# Paste your Python code snippet here to scan for vulnerabilities...\n",
+                label_visibility="collapsed"
             )
-            if st.button("Clone", key="scanner_clone_repo"):
-                if not github_url.strip():
-                    st.error("Please enter a repository URL.")
-                elif not validate_github_url(github_url):
-                    st.error("Please enter a valid GitHub repository URL.")
-                else:
-                    temp_dir = os.path.join("temp_github", f"scan_{datetime.now().strftime('%Y%m%d%H%M%S')}")
-                    os.makedirs(temp_dir, exist_ok=True)
-                    try:
-                        repo_path = clone_repository(github_url, temp_dir)
-                        st.session_state.scanner_github_repo_path = repo_path
-                        st.success("Repository cloned successfully.")
-                    except Exception as e:
-                        st.error(f"Clone failed: {str(e)}")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        status_count = 0
-        results = st.session_state.get("analysis_results") or {}
-        if results.get("semgrep_results", {}).get("results"):
-            status_count = len(results["semgrep_results"]["results"])
-
-        status_line = f"ready · {status_count} findings"
-        st.markdown(f"<div style='display:flex; justify-content: space-between; align-items:center; margin-top: 1rem;'><div></div><span style='color: #8b909e;'>{status_line}</span></div>", unsafe_allow_html=True)
-
         btn_col1, btn_col2 = st.columns(2)
         with btn_col1:
-            if st.button("Run Scan", type="primary", use_container_width=True, key="scanner_run"):
-                st.session_state.run_scan_request = True
-                st.rerun()
-        
+            if not has_code:
+                st.button(
+                    "Run Security Scan",
+                    type="primary",
+                    disabled=True,
+                    use_container_width=True,
+                    key="scanner_run_disabled",
+                    help="Upload a file, ZIP archive, or paste code to enable scanning"
+                )
+            else:
+                if st.button("🚀 Run Security Scan", type="primary", use_container_width=True, key="scanner_run"):
+                    st.session_state.run_scan_request = True
+                    st.rerun()
+
         with btn_col2:
-            if st.button("Clear Results", type="secondary", use_container_width=True, key="scanner_clear"):
+            if st.button("Clear / Reset", type="secondary", use_container_width=True, key="scanner_clear"):
                 _clear_scanner_state()
                 st.rerun()
 
+        if not has_code:
+            st.info("ℹ️ **No code uploaded.** Please upload a Python file (.py), a ZIP archive, or paste a code snippet above to perform a security scan.")
+
     with col2:
         st.markdown('<div class="scanner-panel">', unsafe_allow_html=True)
-        st.markdown('<div class="scanner-panel-header"><div class="scanner-panel-title">workflow</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="scanner-panel-header"><div class="scanner-panel-title">Workflow Progress</div></div>', unsafe_allow_html=True)
 
         scan_step = st.session_state.get("scan_step", 0)
         scan_running = st.session_state.get("scan_running", False)
         scan_error = st.session_state.get("scan_error", False)
 
         steps = [
-            ("Semgrep Scan", "Static rule-based analysis"),
-            ("LLM Analysis", "Local AI vulnerability review"),
-            ("Patch Generation", "AI-suggested remediation"),
-            ("Report Build", "PDF audit report generation"),
-            ("Save to Backend", "Persist via InsForge API"),
+            ("Semgrep Static Scan", "AST security rules & pattern match"),
+            ("AI Vulnerability Review", "Deep risk evaluation & CWE mapping"),
+            ("Security Patch Synthesis", "Remediation generation"),
+            ("Audit Report Compilation", "PDF audit package creation"),
         ]
 
         for idx, (title, description) in enumerate(steps, start=1):
@@ -605,36 +600,16 @@ def unsafe_pickle():
                 unsafe_allow_html=True,
             )
 
-        if st.session_state.analysis_results and not scan_running:
-            st.markdown('<div class="scanner-panel" style="margin-top: 1rem;">', unsafe_allow_html=True)
-            st.markdown('<div class="scanner-panel-header"><div class="scanner-panel-title">actions</div></div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        if st.session_state.get("analysis_results") and not scan_running:
+            st.markdown('<div class="scanner-panel">', unsafe_allow_html=True)
+            st.markdown('<div class="scanner-panel-header"><div class="scanner-panel-title">Actions</div></div>', unsafe_allow_html=True)
 
             result = st.session_state.analysis_results
             code_content = result.get("code_content", "")
             llm_analysis = result.get("llm_analysis", "")
             semgrep_results = result.get("semgrep_results", {})
-            patch_text = result.get("patch_suggestions", "")
-            patch_target = _resolve_patch_target(result.get("target_path", ""))
-
-            col_open_chat, col_copy = st.columns(2)
-            with col_open_chat:
-                if st.button("Ask AI about findings ↗", use_container_width=True, key="scanner_ask_ai"):
-                    AppState.set("current_page", ":material/chat: Intelligence Chat")
-                    st.session_state.quick_ask_prompt = "Explain all findings"
-                    st.session_state.last_scan_code = code_content
-                    st.session_state.last_scan_results = result
-                    st.session_state.last_scan_file = st.session_state.get('last_scan_file', '') or result.get('target_path', '')
-                    st.session_state.llm_analysis = llm_analysis
-                    st.rerun()
-
-            with col_copy:
-                if st.button("Use in Chat", use_container_width=True, key="scanner_use_in_chat"):
-                    st.session_state.last_scan_code = code_content
-                    st.session_state.last_scan_results = result
-                    st.session_state.last_scan_file = st.session_state.get('last_scan_file', '') or result.get('target_path', '')
-                    st.session_state.llm_analysis = llm_analysis
-                    st.session_state.quick_ask_prompt = "Explain all findings"
-                    AppState.set_page(":material/chat: Intelligence Chat")
 
             pdf_bytes = None
             try:
@@ -643,31 +618,104 @@ def unsafe_pickle():
                 pdf_bytes = None
 
             if pdf_bytes:
-                st.download_button("Download PDF Report", pdf_bytes, file_name="security_audit.pdf", mime="application/pdf", use_container_width=True)
+                st.download_button(
+                    "📄 Download PDF Audit Report",
+                    pdf_bytes,
+                    file_name="security_audit_report.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
 
-            if st.button(":material/build: Review Security Patches", type="primary", use_container_width=True, key="goto_patches_btn"):
+            if st.button("🔧 Review & Apply Patches", type="primary", use_container_width=True, key="goto_patches_btn"):
                 AppState.set_page(":material/build: Patch Review")
                 st.rerun()
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # Analysis Results in Main Column
+    # Analysis Results in Main Area
     if results := st.session_state.get("analysis_results"):
         llm_analysis = results.get("llm_analysis", "")
         semgrep_results = results.get("semgrep_results", {})
         findings = semgrep_results.get("results", [])
 
-        # Structured tabs as requested: "AI Analysis" and "Patch Review"
-        tab_analysis, tab_patch = st.tabs(["AI Analysis", "Patch Review"])
+        # Calculate metrics
+        high_count = sum(1 for f in findings if (f.get("extra", {}).get("severity") or "").upper() in ["ERROR", "HIGH"])
+        med_count = sum(1 for f in findings if (f.get("extra", {}).get("severity") or "").upper() in ["WARNING", "MEDIUM"])
+        low_count = sum(1 for f in findings if (f.get("extra", {}).get("severity") or "").upper() in ["INFO", "LOW"])
+        score = max(0, 100 - (high_count * 15 + med_count * 5 + low_count * 1))
+
+        score_color = "#00e5a0" if score >= 80 else "#ffaa00" if score >= 50 else "#ff4060"
+        grade = "CLEAN / LOW RISK" if score >= 85 else "MODERATE RISK" if score >= 50 else "CRITICAL VULNERABILITIES"
+
+        st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #101626 0%, #151d30 100%); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.5rem; margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div style="color: var(--text2); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Security Health Score</div>
+                        <div style="font-family: 'Syne', sans-serif; font-size: 2.5rem; font-weight: 800; color: {score_color}; line-height: 1.1; margin-top: 0.25rem;">
+                            {score} <span style="font-size: 1rem; color: var(--text2);">/ 100</span>
+                        </div>
+                        <div style="color: {score_color}; font-size: 0.85rem; font-weight: 600; margin-top: 0.25rem;">{grade}</div>
+                    </div>
+                    <div style="display: flex; gap: 1.5rem; text-align: center;">
+                        <div style="background: rgba(255,64,96,0.1); border: 1px solid rgba(255,64,96,0.25); border-radius: 10px; padding: 0.75rem 1.25rem;">
+                            <div style="color: #ff4060; font-size: 1.5rem; font-weight: 800;">{high_count}</div>
+                            <div style="color: #8b909e; font-size: 0.75rem; text-transform: uppercase;">High</div>
+                        </div>
+                        <div style="background: rgba(255,170,0,0.1); border: 1px solid rgba(255,170,0,0.25); border-radius: 10px; padding: 0.75rem 1.25rem;">
+                            <div style="color: #ffaa00; font-size: 1.5rem; font-weight: 800;">{med_count}</div>
+                            <div style="color: #8b909e; font-size: 0.75rem; text-transform: uppercase;">Medium</div>
+                        </div>
+                        <div style="background: rgba(0,102,255,0.1); border: 1px solid rgba(0,102,255,0.25); border-radius: 10px; padding: 0.75rem 1.25rem;">
+                            <div style="color: #0066ff; font-size: 1.5rem; font-weight: 800;">{low_count}</div>
+                            <div style="color: #8b909e; font-size: 0.75rem; text-transform: uppercase;">Low</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        tab_findings, tab_analysis, tab_patch = st.tabs([
+            f"🛡️ Security Findings ({len(findings)})",
+            "🤖 AI Security Assessment",
+            "🔧 Patch & Remediation"
+        ])
+
+        with tab_findings:
+            if not findings:
+                st.success("✅ **Clean scan:** No known security vulnerabilities or policy violations were detected in the uploaded code.")
+            else:
+                for idx, f in enumerate(findings, start=1):
+                    sev = (f.get("extra", {}).get("severity") or "low").upper()
+                    sev_class = "severity-high" if sev in ["ERROR", "HIGH"] else "severity-med" if sev in ["WARNING", "MEDIUM"] else "severity-low"
+                    sev_label = "HIGH" if sev in ["ERROR", "HIGH"] else "MEDIUM" if sev in ["WARNING", "MEDIUM"] else "LOW"
+                    check_id = f.get("check_id", "General Vulnerability")
+                    file_path = f.get("path", "source")
+                    line_no = f.get("start", {}).get("line", "N/A")
+                    msg = f.get("extra", {}).get("message", "No description provided.")
+                    code_snippet = f.get("extra", {}).get("lines", "")
+                    cwe = f.get("extra", {}).get("metadata", {}).get("cwe")
+                    cwe_str = f" · {cwe}" if cwe else ""
+
+                    with st.expander(f"[{sev_label}] #{idx}: {check_id} (Line {line_no})", expanded=(idx <= 3)):
+                        st.markdown(f"""
+                            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+                                <span class="severity-badge {sev_class}">{sev_label}</span>
+                                <span style="color: var(--text2); font-size: 0.85rem;">File: <code>{file_path}</code> · Line {line_no}{cwe_str}</span>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        st.markdown(f"**Description:** {msg}")
+                        if code_snippet:
+                            st.code(code_snippet, language="python")
 
         with tab_analysis:
             if llm_analysis:
                 st.markdown('<div class="analysis-container">', unsafe_allow_html=True)
-                st.markdown('<div class="analysis-title">:material/shield: AI Security Analysis</div>', unsafe_allow_html=True)
+                st.markdown('<div class="analysis-title">:material/shield: AI Security Assessment & Remediation</div>', unsafe_allow_html=True)
                 st.markdown(llm_analysis)
                 st.markdown('</div>', unsafe_allow_html=True)
             else:
-                st.info("No AI Security Analysis available.")
+                st.info("No AI Security Assessment available for this scan.")
 
         with tab_patch:
             patch_text = results.get("patch_suggestions", "")
@@ -681,8 +729,8 @@ def unsafe_pickle():
                         patch_text=patch_text,
                         original_code=code_content,
                         patched_code=patched_code,
-                        target_path=results.get("target_path", ""), # Original path for zipping
-                        patch_root=patch_target,                  # Root dir for applying patches
+                        target_path=results.get("target_path", ""),
+                        patch_root=patch_target,
                         patch_file_path=results.get("patch_file_path", ""),
                     )
                 except Exception as e:
@@ -690,5 +738,6 @@ def unsafe_pickle():
                     with st.expander("View Raw Patch Diff"):
                         st.code(patch_text, language="diff")
             else:
-                st.info("No patch suggestions available for the last scan.")
+                st.info("No patch suggestions available for this scan.")
+
     return None

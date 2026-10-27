@@ -2,23 +2,29 @@ import os
 import json
 import logging
 from openai import OpenAI, RateLimitError, AuthenticationError, APIConnectionError
+from src.core.llm import initialize_llm
 
 logger = logging.getLogger(__name__)
 
 def get_groq_model():
-    return os.getenv("GROQ_MODEL", "qwen-2.5-coder-32b")
+    return os.getenv("GROQ_MODEL", "qwen/qwen-2.5-coder-32b-instruct")
 
 def get_ai_response(prompt: str, system_message: str = "", temperature: float = 0.2, max_tokens: int = 2048):
     """
-    Directly call Groq API using the Groq SDK.
+    Call AI model using either Local AI (Ollama) or Cloud API.
     """
-    groq_api_key = os.getenv("GROQ_API_KEY")
-    if not groq_api_key:
-        raise ValueError("API_KEY is missing. Please add it to your .env file.")
+    client = initialize_llm(temperature=temperature)
+    if not client:
+        raise ValueError("No AI backend available. Please check Ollama (http://localhost:11434) or add GROQ_API_KEY to your .env file.")
+
+    provider_type = getattr(client, "provider_type", "cloud")
+    if provider_type == "cloud":
+        active_model = getattr(client, "active_model", None) or get_groq_model()
+    else:
+        active_model = getattr(client, "active_model", None) or os.getenv("OLLAMA_MODEL", "llama3.2:latest")
+
 
     try:
-        client = OpenAI(api_key=groq_api_key, base_url="https://openrouter.ai/api/v1")
-        
         messages = []
         if system_message:
             messages.append({"role": "system", "content": system_message})
@@ -30,21 +36,31 @@ def get_ai_response(prompt: str, system_message: str = "", temperature: float = 
 
         def make_call():
             try:
-                return client.chat.completions.create(
-                    model=get_groq_model(),
-                    messages=messages,
-                    max_tokens=max_tokens,
-                    temperature=max(0.01, temperature),
-                    stream=False,
-                    response_format={"type": "json_object"} if "OUTPUT ONLY VALID JSON" in system_message else None
-                )
+                # Optimize for 8GB RAM / Low capacity: cap max_tokens and set num_ctx context window
+                effective_tokens = min(max_tokens, 1024) if provider_type == "ollama" else max_tokens
+                kwargs = {
+                    "model": active_model,
+                    "messages": messages,
+                    "max_tokens": effective_tokens,
+                    "temperature": max(0.01, temperature),
+                    "stream": False
+                }
+                # Only include json_object format if requesting JSON and using supported cloud model
+                if "OUTPUT ONLY VALID JSON" in system_message and provider_type != "ollama":
+                    kwargs["response_format"] = {"type": "json_object"}
+
+                if provider_type == "ollama":
+                    num_ctx = int(os.getenv("OLLAMA_NUM_CTX", "1024"))
+                    kwargs["extra_body"] = {"num_ctx": num_ctx}
+                    
+                return client.chat.completions.create(**kwargs)
             except AuthenticationError as ae:
                 raise NonRetryableError(ae)
 
         try:
             comp = retry_callable(
                 make_call,
-                retries=3,
+                retries=3 if provider_type != "ollama" else 1,
                 backoff_factor=1.0,
                 exceptions=(Exception,)
             )
@@ -61,9 +77,9 @@ def get_ai_response(prompt: str, system_message: str = "", temperature: float = 
         raise ValueError(f"API rate limit exceeded. Please try again later.")
     except APIConnectionError as e:
         logger.error(f"API Connection Error: {e}")
-        raise ValueError(f"Failed to connect to API. Please check your network.")
+        raise ValueError(f"Failed to connect to AI API. Check if Ollama service is active.")
     except Exception as e:
-        logger.error(f"API Error: {e}")
+        logger.error(f"AI Service Error: {e}")
         raise e
 
 def extract_vulnerabilities_fallback(text: str) -> dict:
@@ -169,7 +185,11 @@ def validate_and_sanitize_vulnerabilities(data: dict, semgrep_results: dict = No
     return {"vulnerabilities": sanitized_vulns}
 
 def _parse_json_from_response(response: str) -> dict:
-    """Extract JSON from AI response, handling markdown blocks and trailing text."""
+    """Extract JSON from AI response, handling markdown blocks, trailing commas, and unescaped text."""
+    if not response or not isinstance(response, str):
+        return {"error": "Empty response from AI"}
+
+    import re
     json_str = ""
     try:
         # 1. Try to find content between ```json and ```
@@ -186,24 +206,30 @@ def _parse_json_from_response(response: str) -> dict:
                 json_str = response[start:end+1]
             else:
                 json_str = response.strip()
-        
-        # Clean up any potential control characters
+
+        # Clean control characters and trailing commas before closing braces/brackets
         json_str = json_str.strip().replace('\r', '')
-        # Simple string to dict
+        json_str = re.sub(r',\s*([\}\]])', r'\1', json_str)
+        
         return json.loads(json_str)
     except Exception as e:
-        logger.error(f"Failed to parse JSON from AI: {e}. Raw: {response}")
-        # Final fallback: if it looks like JSON but load failed, try a less aggressive clean
+        logger.error(f"Failed to parse JSON from AI: {e}. Raw snippet: {response[:300]}")
+        # Try AST evaluation as fallback
         try:
              import ast
-             return ast.literal_eval(json_str)
-        except:
-             # Run regex fallback parser to extract whatever structure we can from the raw response
-             fallback = extract_vulnerabilities_fallback(response)
-             if fallback and fallback.get("vulnerabilities"):
-                 logger.info("Successfully recovered vulnerabilities using regex fallback parser.")
-                 return fallback
-             return {"error": "Invalid JSON response from AI", "raw": response}
+             res = ast.literal_eval(json_str)
+             if isinstance(res, dict):
+                 return res
+        except Exception:
+             pass
+        
+        # Run regex fallback parser to extract whatever structure we can from the raw response
+        fallback = extract_vulnerabilities_fallback(response)
+        if fallback and fallback.get("vulnerabilities"):
+             logger.info("Successfully recovered vulnerabilities using regex fallback parser.")
+             return fallback
+        return {"error": "Invalid JSON response from AI", "raw": response}
+
 
 def generate_vulnerability_analysis(semgrep_results: dict, code_snippet: str, temperature: float = 0.2) -> dict:
     """Generate vulnerability analysis using Groq."""
@@ -292,15 +318,19 @@ def unified_scan_and_patch(semgrep_results: dict, code_snippet: str, file_path: 
     {context_str}
     
     STRICT REMEDIATION RULES:
-    - Eliminate ALL vulnerabilities identified by Semgrep.
-    - Use secure-by-default libraries (e.g., sqlalchemy for DB, argon2 for hashing).
-    - Ensure the 'fixed_code' is functional, complete, and VULNERABILITY-FREE.
+    - Eliminate ALL vulnerabilities identified in the scan findings.
+    - Ensure the remediated code is functional, complete, and 100% VULNERABILITY-FREE.
+    - Do NOT wrap your analysis in code blocks.
     
-    OUTPUT FORMAT:
-    Provide a detailed security analysis first, then output the complete, SECURED code block wrapped in ```python ... ``` markdown."""
+    REQUIRED OUTPUT FORMAT:
+    1. Write your detailed security analysis first (in plain text/markdown).
+    2. At the end, output the complete SECURED code block strictly enclosed in:
+    ```python
+    # complete secured code here
+    ```"""
     
     findings_str = json.dumps(semgrep_results.get("results", [])[:5])
-    prompt = f"File: {file_path}\nFindings: {findings_str}\n\nCode:\n{code_snippet}"
+    prompt = f"File: {file_path}\nFindings: {findings_str}\n\nOriginal Code:\n{code_snippet}"
     
     try:
         from langchain_core.messages import SystemMessage, HumanMessage
@@ -314,24 +344,29 @@ def unified_scan_and_patch(semgrep_results: dict, code_snippet: str, file_path: 
             
         raw_text = chat_out.get("response", "")
         
-        # Parse the raw text to extract analysis and fixed_code
         fixed_code = ""
         analysis = raw_text
         
         import re
-        pattern = r"```(?:python)?\s*(.*?)\s*```"
-        matches = re.findall(pattern, raw_text, re.DOTALL)
-        if matches:
-            for m in matches:
-                if m.strip():
-                    fixed_code = m.strip()
-                    break
-            # The analysis is whatever came before the first code block
-            analysis = raw_text.split("```")[0].strip()
+        # First look specifically for ```python ... ``` block
+        py_matches = re.findall(r"```python\s*(.*?)\s*```", raw_text, re.DOTALL)
+        if py_matches:
+            fixed_code = py_matches[-1].strip() # Use the last python code block
+            analysis = raw_text.split("```python")[0].strip()
         else:
-            # Fallback if no code blocks are found
-            fixed_code = raw_text.strip()
-            
+            # Fallback to any ``` ... ``` code block containing python code keywords
+            all_matches = re.findall(r"```\s*(.*?)\s*```", raw_text, re.DOTALL)
+            if all_matches:
+                for block in reversed(all_matches):
+                    b_strip = block.strip()
+                    if any(kw in b_strip for kw in ["import ", "def ", "class ", "from ", "="]):
+                        fixed_code = b_strip
+                        break
+                analysis = raw_text.split("```")[0].strip()
+            else:
+                fixed_code = ""
+                analysis = raw_text.strip()
+
         return {
             "analysis": analysis,
             "fixed_code": fixed_code
@@ -339,24 +374,38 @@ def unified_scan_and_patch(semgrep_results: dict, code_snippet: str, file_path: 
     except Exception as e:
         return {"error": f"API unavailable. Unable to generate unified scan and patch. Details: {e}"}
 
+
 def generate_chat_response(messages: list, temperature: float = 0.2) -> dict:
-    """Handle chat responses using the Groq model."""
+    """Handle chat responses using Local AI (Ollama) or Cloud models."""
     try:
-        groq_api_key = os.getenv("GROQ_API_KEY")
-        if not groq_api_key:
-            return {"error": "API Key is missing. Please add it to your .env file."}
-            
-        client = OpenAI(api_key=groq_api_key, base_url="https://openrouter.ai/api/v1")
+        client = initialize_llm(temperature=temperature)
+        if not client:
+            return {"error": "No AI backend available. Please start Ollama or configure GROQ_API_KEY."}
+
+        provider_type = getattr(client, "provider_type", "cloud")
+        if provider_type == "cloud":
+            active_model = getattr(client, "active_model", None) or get_groq_model()
+        else:
+            active_model = getattr(client, "active_model", None) or os.getenv("OLLAMA_MODEL", "llama3.2:latest")
+
         
         formatted_messages = []
         for msg in messages:
-            if msg.type == "human":
-                role = "user"
-            elif msg.type == "system":
-                role = "system"
+            if hasattr(msg, "type"):
+                if msg.type == "human":
+                    role = "user"
+                elif msg.type == "system":
+                    role = "system"
+                else:
+                    role = "assistant"
+                content = msg.content
+            elif isinstance(msg, dict):
+                role = msg.get("role", "user")
+                content = msg.get("content", "")
             else:
-                role = "assistant"
-            formatted_messages.append({"role": role, "content": msg.content})
+                role = "user"
+                content = str(msg)
+            formatted_messages.append({"role": role, "content": content})
 
         from src.core.retry_utils import retry_callable
         class NonRetryableError(Exception):
@@ -364,20 +413,26 @@ def generate_chat_response(messages: list, temperature: float = 0.2) -> dict:
 
         def make_call():
             try:
-                return client.chat.completions.create(
-                    model=get_groq_model(),
-                    messages=formatted_messages,
-                    temperature=max(0.01, temperature),
-                    max_tokens=2048,
-                    stream=False
-                )
+                effective_tokens = 768 if provider_type == "ollama" else 2048
+                kwargs = {
+                    "model": active_model,
+                    "messages": formatted_messages,
+                    "temperature": max(0.01, temperature),
+                    "max_tokens": effective_tokens,
+                    "stream": False
+                }
+                if provider_type == "ollama":
+                    num_ctx = int(os.getenv("OLLAMA_NUM_CTX", "1024"))
+                    kwargs["extra_body"] = {"num_ctx": num_ctx}
+
+                return client.chat.completions.create(**kwargs)
             except AuthenticationError as ae:
                 raise NonRetryableError(ae)
 
         try:
             comp = retry_callable(
                 make_call,
-                retries=3,
+                retries=3 if provider_type != "ollama" else 1,
                 backoff_factor=1.0,
                 exceptions=(Exception,)
             )
@@ -391,7 +446,7 @@ def generate_chat_response(messages: list, temperature: float = 0.2) -> dict:
     except RateLimitError as e:
         return {"error": f"API rate limit exceeded. Please try again later."}
     except APIConnectionError as e:
-        return {"error": f"Failed to connect to API. Please check your network."}
+        return {"error": f"Failed to connect to AI API. Check if Ollama service is active."}
     except Exception as e:
         return {"error": str(e)}
 

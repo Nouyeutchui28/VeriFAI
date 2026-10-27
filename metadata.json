@@ -1,0 +1,37 @@
+{
+  "team_id": "PENDING_USER_INPUT",
+  "domain": "autonomous_ai_agents",
+  "language_scope": ["english"],
+  "african_alpha_claim": false,
+  "budget_laptop_claim": true,
+  "submitter": {
+    "name": "PENDING_USER_INPUT",
+    "email": "PENDING_USER_INPUT",
+    "github_handle": "PENDING_USER_INPUT"
+  },
+  "cross_disciplinary_pairing": {
+    "discipline": "Static Program Analysis (Semgrep)",
+    "load_bearing": true,
+    "description": "Deterministic static analysis is used to discover the precise location and class of vulnerabilities, drastically reducing the LLM context window required and eliminating hallucinations during the discovery phase."
+  },
+  "test_prompts": [
+    {
+      "prompt_id": "tp_001",
+      "prompt": "Analyze the following Python snippet for SQL injection and generate a secure patch using parameterized queries."
+    },
+    {
+      "prompt_id": "tp_002",
+      "prompt": "Review this subprocess call and provide a remediated version that prevents command injection without using shell=True."
+    }
+  ],
+  "model": {
+    "name": "Phi-3-mini-4k-instruct",
+    "runtime": "llama.cpp",
+    "quantization": "Q4_K_M",
+    "parameters_estimate": "3.8B",
+    "packaging": "binary_bundle"
+  },
+  "_runtime": {
+    "model_path": "model/Phi-3-mini-4k-instruct-q4.gguf"
+  }
+}
