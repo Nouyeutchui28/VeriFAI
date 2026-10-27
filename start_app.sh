@@ -20,11 +20,6 @@ fi
 # Activate virtual environment
 source "$VENV_PATH/bin/activate"
 
-# Export variables from .env if needed
-if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
-fi
-
 # 1. Start FastAPI Backend in background
 echo "📡 Starting Backend on port $BACKEND_PORT..."
 python -m uvicorn src.api.main:app --host 0.0.0.0 --port $BACKEND_PORT > backend.log 2>&1 &

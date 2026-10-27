@@ -22,9 +22,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 pip install pytest pytest-cov pylint flake8 black bandit
 
-# Configure environment
-cp .env.example .env
-# Edit .env and add your GROQ_API_KEY
+# Local AI uses Ollama by default; no .env file or API key is required.
 ```
 
 ---
@@ -248,7 +246,7 @@ safety check --requirements requirements.txt
 ### Building Docker Image
 ```bash
 docker build -t verifai_llm:dev .
-docker run -p 8501:8501 --env-file .env verifai_llm:dev
+docker run -p 8501:8501 verifai_llm:dev
 ```
 
 ### Updating Dependencies
@@ -327,4 +325,3 @@ For questions or issues:
 
 .md
 4. Open a new issue with details
-

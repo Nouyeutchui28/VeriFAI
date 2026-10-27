@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-from dotenv import load_dotenv
 
 # Ensure the src directory is in the python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -9,9 +8,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from src.core.security import run_semgrep_scan, unified_security_scan
 
 def main():
-    # Load environment variables (e.g., GROQ_API_KEY / OpenRouter key)
-    load_dotenv()
-
     # Create a dummy vulnerable file to test
     test_file = "vulnerable_test.py"
     vulnerable_code = """

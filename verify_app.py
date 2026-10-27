@@ -10,13 +10,6 @@ import json
 import tempfile
 from pathlib import Path
 
-# Load environment variables
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
-
 sys.path.insert(0, str(Path(__file__).parent))
 
 def print_header(title):

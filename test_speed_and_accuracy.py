@@ -2,10 +2,8 @@ import os
 import sys
 import time
 import json
-from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(override=True)
 
 from src.core.llm import initialize_llm
 from src.core.ai_service import get_ai_response, generate_vulnerability_analysis, unified_scan_and_patch

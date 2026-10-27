@@ -41,11 +41,29 @@ def generate_patch(vulnerability_data):
 
 def initialize_llm(temperature: float = 0.2) -> Optional[Any]:
     """
-    Initialize unified LLM client supporting Meterless Nightshift (NVIDIA), Groq, and Ollama.
+    Initialize the configured LLM client. Local Ollama is the default.
     """
     from openai import OpenAI
 
-    # 1. Check Meterless Nightshift (Primary Sponsor AI Provider)
+    provider = os.getenv("LLM_PROVIDER", "ollama").lower()
+
+    if provider == "ollama":
+        ollama_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
+        try:
+            client = OpenAI(base_url=ollama_url, api_key="ollama")
+            client.provider_type = "ollama"
+            client.active_model = ollama_model
+            return client
+        except Exception as e:
+            logger.debug(f"Ollama initialization failed: {e}")
+            return None
+
+    if provider != "cloud":
+        logger.error("Unsupported LLM_PROVIDER %r. Choose 'ollama' or 'cloud'.", provider)
+        return None
+
+    # Cloud providers are available only when explicitly selected.
     nightshift_key = os.getenv("METERLESS_API_KEY") or os.getenv("NIGHTSHIFT_API_KEY")
     if nightshift_key and not nightshift_key.startswith("mock_"):
         base_url = os.getenv("METERLESS_BASE_URL", "https://api.meterless.ai/v1")
@@ -65,17 +83,7 @@ def initialize_llm(temperature: float = 0.2) -> Optional[Any]:
         client.active_model = model
         return client
 
-    # 3. Check Ollama
-    ollama_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
-    ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
-    try:
-        client = OpenAI(base_url=ollama_url, api_key="ollama")
-        client.provider_type = "ollama"
-        client.active_model = ollama_model
-        return client
-    except Exception as e:
-        logger.debug(f"Ollama initialization failed: {e}")
-
+    logger.warning("Cloud LLM selected, but no supported cloud provider key is configured.")
     return None
 
 def list_local_ollama_models() -> list:

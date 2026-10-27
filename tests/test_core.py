@@ -10,7 +10,27 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.core.file_utils import is_valid_file_type, generate_report
+from src.core.llm import initialize_llm
 from src.utils.text_chunk import chunk_text
+
+
+class TestLLMProviderSelection:
+    def test_local_ollama_is_default_without_api_keys(self, monkeypatch):
+        for key in ("LLM_PROVIDER", "METERLESS_API_KEY", "NIGHTSHIFT_API_KEY", "GROQ_API_KEY"):
+            monkeypatch.delenv(key, raising=False)
+
+        client = initialize_llm()
+
+        assert client is not None
+        assert client.provider_type == "ollama"
+        assert client.active_model == "llama3.2:latest"
+
+    def test_cloud_provider_requires_explicit_selection_and_key(self, monkeypatch):
+        monkeypatch.setenv("LLM_PROVIDER", "cloud")
+        for key in ("METERLESS_API_KEY", "NIGHTSHIFT_API_KEY", "GROQ_API_KEY"):
+            monkeypatch.delenv(key, raising=False)
+
+        assert initialize_llm() is None
 
 
 class TestFileValidation:

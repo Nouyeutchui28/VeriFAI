@@ -1,9 +1,5 @@
 import os
-from dotenv import load_dotenv
 import streamlit as st
-
-# Load environment variables at the very beginning
-load_dotenv()
 
 import pandas as pd
 import atexit
@@ -373,7 +369,7 @@ def render_sidebar_navigation(current_page):
             engine_label = "Local AI (Ollama)"
         else:
             active_model_name = os.getenv("GROQ_MODEL", "qwen/qwen-2.5-coder-32b-instruct")
-            engine_label = "Cloud AI (Active)"
+            engine_label = "Cloud AI (explicitly enabled)"
 
         st.markdown(
             f"""
@@ -545,7 +541,7 @@ def render_dashboard_fragment():
             chip_sub = f"Local Ollama ({active_m})"
         else:
             active_m = os.getenv("GROQ_MODEL", "qwen-2.5-coder-32b")
-            chip_sub = f"Cloud Groq ({active_m})"
+            chip_sub = f"Cloud AI ({active_m})"
 
         st.markdown(f"""
             <div class="model-chip" style="margin-top:0;">
@@ -711,4 +707,3 @@ def main():
 if __name__ == "__main__":
     atexit.register(cleanup_temp_files)
     main()
-

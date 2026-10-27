@@ -11,7 +11,6 @@ import tempfile
 import json
 import subprocess
 import difflib
-from dotenv import load_dotenv
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -68,7 +67,6 @@ def get_remediation_from_llm(original_code, findings, previous_code=None, remain
     return None
 
 def main():
-    load_dotenv()
     
     parser = argparse.ArgumentParser(description="Generate 100% Vulnerability-Free Security Patches")
     parser.add_argument("--file", required=True, help="Path to the vulnerable code file")

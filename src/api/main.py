@@ -3,10 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 from src.db.connection import init_db
 
@@ -74,4 +70,3 @@ app.include_router(websocket.router, tags=["WebSocket"])
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-

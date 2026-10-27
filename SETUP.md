@@ -12,9 +12,8 @@ Before you begin, ensure you have the following installed:
 *   **pip** (Python package manager)
 
 ### 🔑 LLM Engine Options
-1.  **Local AI (Offline / Zero Data Leakage - Recommended):** Install and start [Ollama](https://ollama.com). VeriFAI LLM automatically detects local models (`secure-patch-model:latest`, `codellama:latest`, `llama3.2`, etc.) via `http://localhost:11434`.
-2.  **Groq API / OpenRouter (Cloud):** Create an account at [console.groq.com](https://console.groq.com/) and add `GROQ_API_KEY` to `.env`.
-3.  **GitHub Token (Optional):** Required only if you plan to scan your private repositories. Generate a Classic PAT at [GitHub Settings](https://github.com/settings/tokens).
+1.  **Local AI (Default):** Install [Ollama](https://ollama.com) and start it at `http://localhost:11434`. No API key or `.env` file is required.
+2.  **Cloud AI (Optional):** Cloud providers are disabled by default. To opt in, set `LLM_PROVIDER=cloud` and provide the provider credential through your process environment, not a project file.
 
 ---
 
@@ -46,16 +45,7 @@ Before you begin, ensure you have the following installed:
 
 ## ⚙️ Configuration
 
-1.  **Environment Variables:**
-    Copy the template and fill in your keys:
-    ```bash
-    cp .env.example .env
-    ```
-    Edit `.env` and add:
-    *   `GROQ_API_KEY=gsk_...`
-    *   `GITHUB_TOKEN=ghp_...` (optional)
-
-2.  **Database Setup:**
+1.  **Database Setup:**
     The system will automatically initialize a local `verifai_llm.db` (SQLite) upon the first run. For cloud persistence, ensure your InsForge project is configured in `.insforge/project.json`.
 
 ---
@@ -76,7 +66,7 @@ VeriFAI LLM is pre-configured for **Render**.
 5.  Render will automatically detect the `render.yaml` file and set up:
     *   The Streamlit Web Service.
     *   Necessary environment variables.
-6.  Go to the **Environment** settings of your new service and add your `GROQ_API_KEY`.
+6.  Local Ollama is required for local model inference. No provider API key is required.
 
 ### Method 3: Docker (Custom)
 If you prefer using Docker:
@@ -84,8 +74,8 @@ If you prefer using Docker:
 # Build the image
 docker build -t verifai-llm .
 
-# Run the container
-docker run -p 8501:8501 --env-file .env verifai-llm
+# Run the container (no env file required)
+docker run -p 8501:8501 verifai-llm
 ```
 
 ---
@@ -103,7 +93,7 @@ docker run -p 8501:8501 --env-file .env verifai-llm
 
 | Issue | Solution |
 | :--- | :--- |
-| **Model Error (401/403)** | Your `GROQ_API_KEY` is invalid or missing. Update it in `.env` or Render settings. |
+| **Model unavailable** | Start Ollama at `http://localhost:11434` and make sure a model is installed. |
 | **Semgrep Not Found** | Ensure `semgrep` is in your PATH. Try `pip install semgrep`. |
 | **Login Persistence Fails** | Check if the file `.auth_session.json` is writable. |
 | **Dashboard Zeros** | Run at least one scan to populate the dashboard metrics. |

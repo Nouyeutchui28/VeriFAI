@@ -68,7 +68,7 @@ The VeriFAI LLM application is a comprehensive security analysis tool that combi
 #### 1.6 Environment Configuration
 - **Status:** ✓ CONFIGURED
 - **Variables Set:**
-  - GROQ_API_KEY: ✓ Valid (gsk_RJdVFjPA6x5OGQxf...)
+  - Cloud AI credential: Not configured (local Ollama is the default)
   - DATABASE_URL: ✓ Set (sqlite:///)
   - SECRET_KEY: ✓ Set
   - ALGORITHM: ✓ Set (HS256)
@@ -339,8 +339,7 @@ Critical Modules:
 # Ensure Python 3.9+
 python --version
 
-# Ensure .env is configured
-cat .env | grep GROQ_API_KEY
+# No .env file or API key is required; start Ollama for local AI.
 ```
 
 ### Start Application

@@ -4,7 +4,6 @@ import sys
 import argparse
 import json
 import subprocess
-from dotenv import load_dotenv
 
 # Ensure we can import from src
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
@@ -80,8 +79,6 @@ def main():
         print(f"[!] Error: Target path '{target_path}' does not exist.")
         sys.exit(1)
 
-    load_dotenv()
-    
     # 1. Semgrep Scan
     semgrep_results = run_semgrep(target_path)
     findings = semgrep_results.get("results", [])
@@ -235,4 +232,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

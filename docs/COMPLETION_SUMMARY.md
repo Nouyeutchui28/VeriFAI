@@ -238,8 +238,7 @@ Dependency Pinning      No          Yes         ✅ Added
 ```bash
 cd "/home/bruns/Downloads/VeriFAI LLM"
 pip install -r requirements.txt
-cp .env.example .env
-# Edit .env with GROQ_API_KEY
+# Start Ollama; local operation needs no .env file or API key.
 ```
 
 ### 2. Run Tests
@@ -413,4 +412,3 @@ You now have a **production-ready security analysis tool** with:
 All files are in `/home/bruns/Downloads/VeriFAI LLM/`
 
 Ready to commit? 🚀
-

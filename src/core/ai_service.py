@@ -15,7 +15,7 @@ def get_ai_response(prompt: str, system_message: str = "", temperature: float = 
     """
     client = initialize_llm(temperature=temperature)
     if not client:
-        raise ValueError("No AI backend available. Please check Ollama (http://localhost:11434) or add GROQ_API_KEY to your .env file.")
+        raise ValueError("No AI backend available. Start Ollama at http://localhost:11434 or explicitly configure a cloud provider.")
 
     provider_type = getattr(client, "provider_type", "cloud")
     if provider_type == "cloud":
@@ -380,7 +380,7 @@ def generate_chat_response(messages: list, temperature: float = 0.2) -> dict:
     try:
         client = initialize_llm(temperature=temperature)
         if not client:
-            return {"error": "No AI backend available. Please start Ollama or configure GROQ_API_KEY."}
+            return {"error": "No AI backend available. Please start Ollama at http://localhost:11434."}
 
         provider_type = getattr(client, "provider_type", "cloud")
         if provider_type == "cloud":

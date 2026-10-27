@@ -21,7 +21,7 @@ def render_settings_tab():
     with tab1:
         st.markdown("### :material/psychology: Language Model Settings")
         render_info_banner(
-            "Configure LLM parameters for security analysis intelligence (Local AI or Cloud API)",
+            "Configure local Ollama or explicitly enabled cloud AI for security analysis.",
             type="info"
         )
 
@@ -31,12 +31,12 @@ def render_settings_tab():
             render_settings_group("AI Provider Selection", ":material/smart_toy:", "Choose Backend")
             provider_choice = st.radio(
                 "AI Backend Provider",
-                options=["Cloud API (OpenRouter - Fast & High Accuracy)", "Local AI (Ollama - Offline)"],
-                index=0 if os.getenv("LLM_PROVIDER", "cloud").lower() == "cloud" else 1,
+                options=["Local AI (Ollama - Offline)", "Cloud API (requires provider key)"],
+                index=1 if os.getenv("LLM_PROVIDER", "ollama").lower() == "cloud" else 0,
                 key="settings_provider_radio"
             )
             
-            selected_provider_key = "cloud" if "Cloud" in provider_choice else "ollama"
+            selected_provider_key = "cloud" if provider_choice.startswith("Cloud") else "ollama"
             os.environ["LLM_PROVIDER"] = selected_provider_key
             AppState.set("llm_provider", selected_provider_key)
 
@@ -78,6 +78,7 @@ def render_settings_tab():
                 )
                 os.environ["GROQ_MODEL"] = selected_model
                 st.info(f":material/rocket_launch: Cloud API Active: Using **{selected_model}**.")
+                st.warning("Cloud AI sends prompts and code to the configured provider. No cloud API key is stored in this app.")
 
 
         with col2:
@@ -183,16 +184,9 @@ def render_settings_tab():
     with tab4:
         st.markdown("### :material/security: Security & Authentication")
         render_info_banner(
-            "Manage API keys, tokens, and security settings",
-            type="warning"
+            "AI runs locally through Ollama by default. This app does not collect or store AI API keys.",
+            type="info"
         )
-
-        render_settings_group("API Configuration", ":material/vpn_key:")
-        with st.expander("View API Key (Click to reveal)"):
-            st.warning(":material/warning: Keep your API key secret!")
-            api_key = st.text_input("API Key", type="password", label_visibility="collapsed")
-            if st.button(":material/sync: Rotate API Key", type="secondary", use_container_width=True):
-                st.info(":material/check_circle: API key rotated. Update your integrations.")
 
         render_settings_group("Session Management", ":material/person:")
         col1, col2 = st.columns(2)
@@ -380,50 +374,11 @@ def render_settings_tab():
     # TAB 4: SECURITY & API
     # ========================================================================
     with tab4:
-        st.header(":material/security: Security & API Keys")
+        st.header(":material/security: Security")
         render_info_banner(
-            "Manage API credentials and security settings. Keys are never transmitted or logged.",
-            type="warning"
+            "Manage local session and security settings.",
+            type="info"
         )
-
-        render_settings_group("API Credentials", ":material/vpn_key:")
-
-        # Groq API Key
-        st.markdown("**Groq API Key**")
-        groq_api_key = st.text_input(
-            "Groq API Key (GROQ_API_KEY)",
-            type="password",
-            value=os.getenv("GROQ_API_KEY", ""),
-            placeholder="gsk_...",
-            help="Required for qwen-2.5-coder-32b intelligence. Get one at console.groq.com/keys"
-        )
-        if groq_api_key and groq_api_key != os.getenv("GROQ_API_KEY"):
-            # Optionally update .env or just use in session
-            # For simplicity in this demo, we'll suggest saving it
-            st.info(":material/lightbulb: Don't forget to save settings to apply your new key.")
-            os.environ["GROQ_API_KEY"] = groq_api_key
-
-        st.divider()
-
-        # GitHub Token
-        st.markdown("**GitHub Personal Access Token**")
-        github_token = st.text_input(
-            "GitHub Token",
-            type="password",
-            placeholder="ghp_...",
-            help="Required for private repository scanning"
-        )
-        if github_token:
-            st.caption(":material/check_circle: Token configured (masked for security)")
-
-        st.divider()
-
-        # Groq Status
-        st.markdown("**Groq Intelligence Engine**")
-        st.success(":material/check_circle: System Context: qwen-2.5-coder-32b Active")
-        st.caption("The pipeline is now running using Groq API.")
-
-        st.divider()
 
         render_settings_group("Security Settings", ":material/shield:")
 

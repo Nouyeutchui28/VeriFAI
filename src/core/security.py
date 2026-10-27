@@ -631,7 +631,9 @@ def generate_patch_suggestions(semgrep_results, code_snippet, llm=None, file_pat
     Generate security patches based on scanner results and expert AI analysis.
     Redacts PII/Secrets.
     """
-    if not os.getenv("GROQ_API_KEY"):
+    provider_type = os.getenv("LLM_PROVIDER", "ollama").lower()
+    has_cloud_key = any(os.getenv(key) for key in ("METERLESS_API_KEY", "NIGHTSHIFT_API_KEY", "GROQ_API_KEY"))
+    if provider_type == "cloud" and not has_cloud_key:
         return _fallback_patch_from_findings(semgrep_results, code_snippet, file_path)
 
     safe_code = scrub_sensitive_data(code_snippet)
@@ -840,7 +842,7 @@ def unified_security_scan(semgrep_results, code_snippet, llm=None, file_path="ma
         return analysis, final_patch
 
     # Check provider type & local caching
-    provider_type = os.getenv("LLM_PROVIDER", "cloud").lower()
+    provider_type = os.getenv("LLM_PROVIDER", "ollama").lower()
     
     code_hash = compute_code_hash(f"{code_snippet}:{file_path}:{provider_type}")
     cached = get_cached_scan(code_hash)

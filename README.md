@@ -81,8 +81,7 @@ flowchart TD
 git clone https://github.com/Nouyeutchui28/VeriFAI.git
 cd VeriFAI
 
-# Copy configuration (includes dual-mode resilient execution)
-cp .env.example .env
+# No API key or .env file is required. Install and start Ollama locally.
 ```
 
 ### 2. Run the 3-Agent Cooperative CLI Demo
@@ -100,13 +99,6 @@ python test_agentic_pipeline.py
 streamlit run app.py
 ```
 Navigate to **🤖 Agentic PatchOps** in the sidebar to visualize the real-time agent debate stream, live H-MEM episode count, and Zetaris data telemetry!
-
-### 3. Configuration
-Create a `.env` file from the example:
-```bash
-cp .env.example .env
-```
-Add your `GROQ_API_KEY` and `GITHUB_TOKEN` to the `.env` file.
 
 ### 4. Run the Platform
 ```bash
@@ -130,7 +122,7 @@ streamlit run app.py
 
 VeriFAI LLM is built on a modular stack:
 *   **Frontend:** Streamlit with a custom-engineered "Malware Analyzer" dark theme.
-*   **Intelligence:** Groq API (Qwen-2.5-Coder-32B or other supported models).
+*   **Intelligence:** Local Ollama by default; cloud providers are opt-in.
 *   **Static Analysis:** Semgrep OSS Engine.
 *   **Storage:** SQLite (Local) & InsForge (Cloud Persistence).
 

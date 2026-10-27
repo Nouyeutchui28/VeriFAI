@@ -21,11 +21,7 @@ ollama create secure-patch-model -f Modelfile
 
 ### 3️⃣ Configure Environment
 
-1. Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
-2. Open `.env` and configure your database and secret keys. (No API keys required for the local engine!)
+No `.env` file or API key is required for local operation. Set `OLLAMA_MODEL` only if you want to use a model other than the default.
 
 ### 4️⃣ Launch the Application
 

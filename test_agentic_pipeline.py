@@ -16,9 +16,6 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
-from dotenv import load_dotenv
-load_dotenv(BASE_DIR / ".env")
-
 from src.core.multi_agent.orchestrator import MultiAgentOrchestrator
 
 def main():
